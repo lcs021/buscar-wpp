@@ -199,7 +199,7 @@ const FOTOS = {
 };
 const foto = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=72`;
 // largura média de cada letra no título (em), para o nome caber sem quebrar no meio da palavra
-const FATOR = {"barbearia": 0.55, "hamburgueria": 0.86, "pizzaria": 0.62, "acai": 0.62, "padaria": 0.64, "restaurante": 0.6, "oficina": 0.56, "estetica_auto": 0.56, "salao": 0.5, "manicure": 0.5, "dentista": 0.68, "clinica": 0.68, "pet": 0.6, "loja": 0.56, "academia": 0.62, "generico": 0.68};
+const FATOR = {"barbearia": 0.47, "hamburgueria": 0.86, "pizzaria": 0.62, "acai": 0.62, "padaria": 0.64, "restaurante": 0.6, "oficina": 0.56, "estetica_auto": 0.56, "salao": 0.57, "manicure": 0.57, "dentista": 0.68, "clinica": 0.68, "pet": 0.6, "loja": 0.56, "academia": 0.62, "generico": 0.68};
 
 // Direção de arte do nicho (usada também pela página de proposta)
 export const temaVisual = (nicho) => ({ ...(D[nicho] || D.generico), fotos: (FOTOS[nicho] || FOTOS.generico).map((id) => foto(id, 1000)) });
@@ -404,12 +404,12 @@ function secDiferenciais(x, l) {
   </div></section>`;
 }
 
-function campo(x, [id, rot, tipo, extra]) {
+function campo(x, [id, rot, tipo, extra], largo = false) {
   const nome = `name="${id}" id="f-${id}"`;
   if (tipo === "textarea") return `<label class="campo largo" for="f-${id}"><span>${esc(rot)}</span><textarea ${nome} rows="3"${extra ? ` placeholder="${esc(extra)}"` : ""}></textarea></label>`;
-  if (tipo === "servicos") return `<label class="campo" for="f-${id}"><span>${esc(rot)}</span><select ${nome}><option value="">Escolha</option>${x.t.servicos.map(([s]) => `<option>${esc(s)}</option>`).join("")}<option>Outro</option></select></label>`;
-  if (tipo === "opcoes") return `<label class="campo" for="f-${id}"><span>${esc(rot)}</span><select ${nome}>${extra.split("|").map((o) => `<option>${esc(o)}</option>`).join("")}</select></label>`;
-  return `<label class="campo" for="f-${id}"><span>${esc(rot)}</span><input ${nome} type="text"${id === "nome" ? ' autocomplete="name" required' : ""}${extra ? ` placeholder="${esc(extra)}"` : ""}></label>`;
+  if (tipo === "servicos") return `<label class="campo${largo ? " largo" : ""}" for="f-${id}"><span>${esc(rot)}</span><select ${nome}><option value="">Escolha</option>${x.t.servicos.map(([s]) => `<option>${esc(s)}</option>`).join("")}<option>Outro</option></select></label>`;
+  if (tipo === "opcoes") return `<label class="campo${largo ? " largo" : ""}" for="f-${id}"><span>${esc(rot)}</span><select ${nome}>${extra.split("|").map((o) => `<option>${esc(o)}</option>`).join("")}</select></label>`;
+  return `<label class="campo${largo ? " largo" : ""}" for="f-${id}"><span>${esc(rot)}</span><input ${nome} type="text"${id === "nome" ? ' autocomplete="name" required' : ""}${extra ? ` placeholder="${esc(extra)}"` : ""}></label>`;
 }
 
 function secForm(x, l, { passos = false } = {}) {
@@ -421,7 +421,7 @@ function secForm(x, l, { passos = false } = {}) {
     </ol>` : `<div class="form-lado"><p>Preencha e a mensagem já sai pronta para ${esc(x.nome)}${x.num ? " no WhatsApp" : ""}.</p>
       ${l.telefone ? `<p class="fone">${svg("fone", 18)}<a href="tel:+55${x.tel}">${esc(l.telefone)}</a></p>` : ""}</div>`;
   const form = x.num ? `<form class="form" data-wa="${x.num}" data-nome="${esc(x.nome)}" novalidate>
-      ${f.campos.map((c) => campo(x, c)).join("")}
+      ${(() => { const curtos = f.campos.filter((c) => c[2] !== "textarea"); const ultimo = curtos.length % 2 ? curtos[curtos.length - 1] : null; return f.campos.map((c) => campo(x, c, c === ultimo)).join(""); })()}
       <button class="btn cheio largo" type="submit">${svg("zap", 18)} ${esc(f.botao)}</button>
       <p class="form-aviso">Abre o WhatsApp com a mensagem pronta. Nada é enviado sem você confirmar.</p>
     </form>` : `<div class="form sem-wa"><p>Para ${esc(f.verbo)}, fale direto com ${esc(x.nome)}:</p>${botao(x, "cheio largo", x.contato.rot)}</div>`;
