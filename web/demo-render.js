@@ -307,7 +307,7 @@ function heroOS(x, l) {
       <p class="kicker">${esc(t.rotulo)}${x.lugar ? ` em ${esc(x.lugar)}` : ""}</p>
       <h1 ${x.h1}>${esc(x.nome)}</h1>
       <p class="chamada">${esc(t.chamada)}</p>
-      <div class="acoes">${botao(x)}<a class="btn contorno" href="#contato">Pedir orçamento</a></div>
+      <div class="acoes">${botao(x)}<a class="btn contorno" href="#servicos">Ver serviços</a></div>
     </div>
     <figure class="h-foto">${img(x.ids[0], `${t.rotulo} (foto ilustrativa)`, { larg: 1100, sizes: "(max-width: 860px) 100vw, 55vw", prioridade: true })}${fotoTag}</figure>
     <aside class="os" id="servicos" aria-label="Serviços">
@@ -554,7 +554,7 @@ h1{overflow-wrap:break-word;word-break:normal;hyphens:manual;font-size:min(var(-
 /* hero ordem de serviço */
 .h-os{max-width:var(--max);margin:0 auto;padding:48px 20px 64px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:32px 48px;align-items:start}
 .h-os .h-txt{grid-column:1;grid-row:1;padding-top:24px;--hmax:112px}
-.h-os .h-foto{grid-column:2;grid-row:1 / span 2;aspect-ratio:4/5;border-radius:var(--raio)}
+.h-os .h-foto{grid-column:2;grid-row:1 / span 2;aspect-ratio:4/5;border-radius:var(--raio);position:sticky;top:90px}
 .os{grid-column:1;grid-row:2;background:#fff;color:#1d2125;border:2px solid var(--tinta);border-radius:var(--raio);box-shadow:8px 8px 0 var(--tinta)}
 .os-cab{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:12px 16px;border-bottom:2px solid var(--tinta);background:var(--acento);color:#15181B}
 .os-cab b{font-family:var(--tit);font-size:22px;${caixa}}.os-cab span{font-size:13px;font-weight:600;text-align:right}
@@ -711,7 +711,7 @@ h1{overflow-wrap:break-word;word-break:normal;hyphens:manual;font-size:min(var(-
   .h-painel{justify-content:flex-start}.h-letreiro .h-txt{max-width:none;padding:40px 20px 48px}
   .selo{width:96px;height:96px;left:auto;right:16px;top:auto;bottom:-30px}.selo b{font-size:28px}
   .h-os,.h-agenda{grid-template-columns:1fr;padding-top:24px;gap:28px}
-  .h-os .h-foto{grid-column:1;grid-row:auto;order:-1;aspect-ratio:4/3}
+  .h-os .h-foto{grid-column:1;grid-row:auto;order:-1;aspect-ratio:4/3;position:relative;top:auto}
   .h-os .h-txt,.os{grid-column:1;grid-row:auto}.h-os .h-txt{padding-top:0}
   .os{box-shadow:5px 5px 0 var(--tinta)}
   .h-lado{order:-1;padding-bottom:0}.h-agenda .h-foto{aspect-ratio:4/3}
