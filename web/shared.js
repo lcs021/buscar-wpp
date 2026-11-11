@@ -18,6 +18,7 @@ const ICONES = {
   cruz: '<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
   haltere: '<path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12"/>',
   loja: '<path d="M3 9l2-5h14l2 5"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
   estrela: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/>',
   pin: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   fone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
@@ -112,7 +113,7 @@ export function numeroWhats(l) {
 }
 export const linkMaps = (l) => l.maps_url || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${l.nome}, ${l.endereco}`);
 
-function iniciais(nome) {
+export function iniciais(nome) {
   const ign = new Set(["de", "da", "do", "das", "dos", "e", "&", "o", "a"]);
   const p = String(nome).replace(/[|—–-]/g, " ").split(/\s+/).filter((x) => x && !ign.has(x.toLowerCase()) && /[\p{L}\d]/u.test(x));
   return ((p[0]?.[0] || "?") + (p[1]?.[0] || "")).toUpperCase();
@@ -145,141 +146,8 @@ export function mensagem(l, perfil = {}, link = "") {
     + `É só uma demonstração, sem compromisso.${extra} Faz sentido para vocês?`;
 }
 
-// ------------------------------------------------------------------ site demo
-export function renderDemo(l, { preview = false } = {}) {
-  const t = TEMAS[l.nicho] || TEMAS.generico;
-  const nome = nomeCurto(l.nome);
-  const num = numeroWhats(l);
-  const contato = num ? { url: `https://wa.me/${num}`, ic: "zap", rot: "Chamar no WhatsApp" }
-    : l.telefone ? { url: `tel:+55${digitos(l.telefone).replace(/^0+/, "")}`, ic: "fone", rot: `Ligar ${l.telefone}` }
-    : { url: linkMaps(l), ic: "pin", rot: "Ver no Google Maps" };
-  const bairro = l.bairro || l.cidade || "";
-  const local = [l.bairro, l.cidade].filter(Boolean).join(" · ");
-  const rua = String(l.endereco || "").split(" - ")[0];
-  const estrelas = Array.from({ length: 5 }, () => svg("estrela", 16, 0, true)).join("");
-  const temNota = l.nota && l.avaliacoes;
-  const sobre = temNota ? `Nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações no Google.${bairro ? ` Atendimento em ${bairro}${l.cidade && l.cidade !== bairro ? `, ${l.cidade}` : ""}.` : ""}`
-    : `${t.rotulo}${bairro ? ` em ${bairro}` : ""}.`;
-  const caixa = t.caixaAlta ? "text-transform:uppercase;letter-spacing:.02em;" : "";
-  const servicos = t.servicos.map(([s, d]) => `<div class="serv"><span class="serv-ic">${svg(t.icone, 22)}</span><div><b>${esc(s)}</b><span>${esc(d)}</span></div></div>`).join("");
-  const galeria = [1, 2, 3, 4].map((i) => `<div class="foto f${i}"><span>${svg("foto", 26)}</span><small>Foto real do espaço</small></div>`).join("");
-  const redes = [l.instagram && `<a class="btn s" href="${esc(l.instagram)}" target="_blank" rel="noopener">${svg("insta", 20)} Instagram</a>`].filter(Boolean).join("");
-  return `<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(nome)} — demonstração</title><meta name="robots" content="noindex,nofollow">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{--f:${t.fundo};--f2:${t.fundo2};--t:${t.texto};--s:${t.suave};--a:${t.acento};--at:${t.acentoTxt};--tit:${t.titulo}}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--f);color:var(--t);font:16px/1.6 'Poppins','Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-a{color:inherit}
-.demo{position:sticky;top:0;z-index:20;background:#111;color:#fff;font-size:12.5px;text-align:center;padding:7px 14px;line-height:1.35}
-.demo b{color:#facc15}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-header.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-.marca{display:flex;align-items:center;gap:12px;font-family:var(--tit);font-weight:700;font-size:19px;${caixa}}
-.mono{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--a);color:var(--at);font-family:var(--tit);font-size:18px;font-weight:700;box-shadow:0 0 0 3px var(--f),0 0 0 4px var(--a)}
-.btn{display:inline-flex;align-items:center;gap:9px;padding:14px 22px;border-radius:999px;font-weight:600;text-decoration:none;transition:transform .15s}
-.btn:hover{transform:translateY(-2px)}
-.btn.p{background:var(--a);color:var(--at);box-shadow:0 10px 30px -10px var(--a)}
-.btn.s{border:1.5px solid color-mix(in srgb,var(--t) 30%,transparent)}
-.hero{padding:34px 0 64px}
-.hero .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:42px;align-items:center}
-.hero .grid>*{min-width:0}
-.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:color-mix(in srgb,var(--a) 14%,transparent);color:var(--a);font-weight:600;font-size:14px}
-.pill .est{display:flex}
-h1,h2{overflow-wrap:anywhere}
-h1{font-family:var(--tit);font-size:clamp(40px,7vw,74px);line-height:1.02;margin:18px 0 16px;${caixa}}
-h1.longo{font-size:clamp(32px,8.4vw,60px)}
-.lead{font-size:19px;color:var(--s);max-width:30ch;margin:0 0 28px}
-.ctas{display:flex;flex-wrap:wrap;gap:12px}
-.arte{position:relative;aspect-ratio:4/5;border-radius:28px;overflow:hidden;background:radial-gradient(120% 90% at 20% 10%,color-mix(in srgb,var(--a) 55%,var(--f2)) 0%,var(--f2) 55%,var(--f) 100%);display:grid;place-items:center;animation:sobe .9s ease both}
-.arte::before{content:"";position:absolute;inset:0;background-image:radial-gradient(color-mix(in srgb,var(--t) 9%,transparent) 1px,transparent 1px);background-size:14px 14px}
-.arte .big{position:relative;width:46%;filter:drop-shadow(0 18px 30px rgba(0,0,0,.35));animation:flutua 5s ease-in-out infinite}
-.arte .big svg{width:100%;height:auto;color:var(--t)}
-.arte .tag{position:absolute;left:18px;bottom:18px;right:18px;background:color-mix(in srgb,var(--f) 82%,transparent);backdrop-filter:blur(8px);border-radius:16px;padding:12px 14px;font-size:13px;color:var(--s);display:flex;gap:10px;align-items:center}
-.arte .tag svg{color:var(--a);flex:none}.arte .tag b{color:var(--t);display:block;font-size:14px}
-.numeros{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:color-mix(in srgb,var(--t) 10%,transparent);border-radius:20px;overflow:hidden;margin-top:-28px;position:relative}
-.numeros div{background:var(--f2);padding:20px;text-align:center}
-.numeros b{display:block;font-family:var(--tit);font-size:30px;color:var(--a)}
-.numeros .bai b{font-size:19px;line-height:1.25;padding:6px 0 5px}
-.numeros span{font-size:13px;color:var(--s)}
-.sec{padding:72px 0}.sec.alt{background:var(--f2)}
-.sobrel{color:var(--a);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.14em;margin:0 0 6px}
-h2{font-family:var(--tit);font-size:clamp(30px,4.5vw,44px);line-height:1.1;margin:0 0 26px;${caixa}}
-.sobre{font-size:19px;color:var(--s);max-width:60ch}
-.servs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.serv{display:flex;gap:14px;align-items:flex-start;padding:20px;border-radius:18px;background:var(--f);border:1px solid color-mix(in srgb,var(--t) 10%,transparent);transition:border-color .2s,transform .2s}
-.serv:hover{border-color:var(--a);transform:translateY(-3px)}
-.serv-ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--a) 15%,transparent);color:var(--a)}
-.serv b{display:block}.serv span{font-size:14px;color:var(--s)}
-.nota{font-size:13px;color:var(--s);margin-top:14px;font-style:italic}
-.galeria{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:180px 180px;gap:12px}
-.foto{border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--s);background:linear-gradient(135deg,color-mix(in srgb,var(--a) 22%,var(--f2)),var(--f2));border:1px dashed color-mix(in srgb,var(--t) 22%,transparent)}
-.foto small{font-size:12px}.f1{grid-row:span 2}.f4{grid-column:span 2}
-.local{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.card{padding:26px;border-radius:20px;background:var(--f);border:1px solid color-mix(in srgb,var(--t) 10%,transparent)}
-.linha{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;color:var(--s)}.linha svg{color:var(--a);flex:none;margin-top:3px}
-.linha b{color:var(--t);display:block}
-.mapa{border-radius:20px;min-height:240px;display:grid;place-items:center;text-align:center;padding:20px;color:var(--s);text-decoration:none;background:repeating-linear-gradient(45deg,var(--f2) 0 12px,color-mix(in srgb,var(--f2) 85%,var(--t)) 12px 13px)}
-.mapa .p{color:var(--a);animation:pula 1.6s ease-in-out infinite}
-.final{text-align:center;padding:80px 0;background:var(--a);color:var(--at)}
-.final h2{margin-bottom:12px}.final p{opacity:.85;margin:0 0 26px}
-.final .btn{background:var(--at);color:var(--a)}
-footer{padding:28px 0 90px;text-align:center;font-size:13px;color:var(--s)}
-.flut{position:fixed;right:16px;bottom:16px;z-index:15;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#25d366;color:#fff;box-shadow:0 12px 30px -8px rgba(0,0,0,.5)}
-.flut.alt{background:var(--a);color:var(--at)}
-.rev{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}.rev.on{opacity:1;transform:none}
-@keyframes sobe{from{opacity:0;transform:translateY(30px) scale(.97)}}
-@keyframes flutua{50%{transform:translateY(-12px) rotate(-3deg)}}
-@keyframes pula{50%{transform:translateY(-8px)}}
-@media (max-width:820px){.hero .grid,.local{grid-template-columns:1fr}.arte{aspect-ratio:16/11;order:-1}.servs{grid-template-columns:1fr 1fr}.galeria{grid-template-columns:1fr 1fr;grid-template-rows:150px 150px 150px}.f1,.f4{grid-row:auto;grid-column:span 2}.lead{font-size:17px}}
-@media (max-width:520px){.servs{grid-template-columns:1fr}.numeros b{font-size:24px}.sec{padding:56px 0}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rev{opacity:1;transform:none}}
-</style></head>
-<body>
-<div class="demo"><b>DEMONSTRAÇÃO</b> — modelo criado para ${esc(nome)}. Não é o site oficial.${preview ? " (pré-visualização)" : ""}</div>
-<div class="wrap"><header class="nav"><div class="marca"><span class="mono">${esc(iniciais(nome))}</span>${esc(nome)}</div></header></div>
-<section class="hero"><div class="wrap grid">
-  <div>
-    ${temNota ? `<span class="pill"><span class="est">${estrelas}</span>${notaBR(l.nota)} · ${milhar(l.avaliacoes)} avaliações no Google</span>` : ""}
-    <h1 class="${nome.length > 20 ? "longo" : ""}">${esc(nome)}</h1>
-    <p class="lead">${esc(t.chamada)}</p>
-    <div class="ctas"><a class="btn p" href="${esc(contato.url)}">${svg(contato.ic, 20)} ${esc(t.cta)}</a>
-    <a class="btn s" href="${esc(linkMaps(l))}" target="_blank" rel="noopener">${svg("pin", 20)} Como chegar</a>${redes}</div>
-  </div>
-  <div class="arte"><div class="big">${svg(t.icone, 200, 1.1)}</div>
-    ${local ? `<div class="tag">${svg("pin", 18)}<div><b>${esc(local)}</b>${esc(rua)}</div></div>` : ""}</div>
-</div></section>
-${temNota ? `<div class="wrap"><div class="numeros rev">
-  <div><b>${notaBR(l.nota)}</b><span>nota no Google</span></div>
-  <div><b>${milhar(l.avaliacoes)}</b><span>avaliações</span></div>
-  <div class="bai"><b>${esc(bairro || "—")}</b><span>${esc(l.cidade || "")}</span></div>
-</div></div>` : ""}
-<section class="sec"><div class="wrap rev"><p class="sobrel">Sobre</p><h2>${esc(nome)}</h2><p class="sobre">${esc(sobre)}</p></div></section>
-<section class="sec alt"><div class="wrap rev"><p class="sobrel">Serviços</p><h2>O que você encontra aqui</h2>
-  <div class="servs">${servicos}</div><p class="nota">Lista de exemplo — os serviços e valores reais entram na versão final.</p></div></section>
-<section class="sec"><div class="wrap rev"><p class="sobrel">Galeria</p><h2>Conheça o espaço</h2><div class="galeria">${galeria}</div>
-  <p class="nota">Na versão final entram as fotos reais do seu espaço e do seu trabalho.</p></div></section>
-<section class="sec alt"><div class="wrap rev"><p class="sobrel">Localização</p><h2>Venha nos visitar</h2><div class="local">
-  <div class="card">
-    ${l.endereco ? `<div class="linha">${svg("pin", 20)}<div><b>Endereço</b>${esc(l.endereco)}</div></div>` : ""}
-    ${l.telefone ? `<div class="linha">${svg("fone", 20)}<div><b>Telefone</b><a href="tel:+55${digitos(l.telefone).replace(/^0+/, "")}">${esc(l.telefone)}</a></div></div>` : ""}
-    <a class="btn p" href="${esc(linkMaps(l))}" target="_blank" rel="noopener">${svg("pin", 18)} Abrir no Google Maps</a>
-  </div>
-  <a class="mapa" href="${esc(linkMaps(l))}" target="_blank" rel="noopener"><div><div class="p">${svg("pin", 44)}</div><b>${esc(bairro || nome)}</b><br>Toque para ver no mapa</div></a>
-</div></div></section>
-<section class="final"><div class="wrap rev"><h2>Fale com a gente</h2><p>${esc(bairro ? `Atendimento em ${bairro}${l.cidade && l.cidade !== bairro ? `, ${l.cidade}` : ""}.` : t.chamada)}</p>
-  <a class="btn" href="${esc(contato.url)}">${svg(contato.ic, 20)} ${esc(contato.rot)}</a></div></section>
-<footer>${esc(nome)}${l.endereco ? ` · ${esc(l.endereco)}` : ""}<br>Demonstração — não é o site oficial.</footer>
-<a class="flut${contato.ic === "zap" ? "" : " alt"}" href="${esc(contato.url)}" aria-label="${esc(contato.rot)}">${svg(contato.ic, 28)}</a>
-<script>
-(function(){var els=document.querySelectorAll('.rev');if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('on')});return}
-var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('on');io.unobserve(x.target)}})},{threshold:.12});
-els.forEach(function(e){io.observe(e)})})();
-</script>
-</body></html>`;
-}
+// ------------------------------------------------------------------ site demo (layouts por nicho em demo-render.js)
+export { renderDemo } from "./demo-render.js";
 
 // ------------------------------------------------------------------ cadastro sem Google (manual / planilha)
 const NICHOS_RE = [
