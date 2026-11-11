@@ -1,0 +1,4 @@
+# Usado só se você preferir o Supabase CLI (opcional — o README ensina pelo site).
+# A função confere o login sozinha, então a verificação automática de JWT fica desligada.
+[functions.buscar-empresas]
+verify_jwt = false

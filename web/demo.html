@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Carregando…</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f1110;color:#9aa59f;font:15px/1.5 system-ui,sans-serif;text-align:center;padding:20px}
+    .giro{width:28px;height:28px;border:3px solid #26302b;border-top-color:#22c55e;border-radius:50%;animation:g .8s linear infinite;margin:0 auto 12px}
+    @keyframes g{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="msg"><div class="giro"></div>Carregando…</div>
+  <script type="module">
+    import { rpcPublica } from "./sb.js";
+    import { renderDemo } from "./shared.js";
+    const slug = new URLSearchParams(location.search).get("s") || "";
+    const falha = (t) => { document.title = "Página não encontrada"; document.getElementById("msg").textContent = t; };
+    try {
+      const lead = await rpcPublica("demo_publica", { p_slug: slug, p_contar: true });
+      if (!lead) falha("Esta demonstração não está disponível.");
+      else { document.open(); document.write(renderDemo(lead)); document.close(); }
+    } catch (e) {
+      falha("Não foi possível carregar a demonstração agora. Tente de novo em instantes.");
+    }
+  </script>
+</body>
+</html>
