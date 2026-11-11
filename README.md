@@ -23,8 +23,8 @@ Tudo roda no Supabase (banco, login e busca) e numa hospedagem grátis de site e
 2. Abra o arquivo `supabase/migrations/20261111000000_lead_finder.sql`, copie tudo, cole e clique em **Run**.
    Tem que aparecer *Success*. Pode rodar de novo sem problema.
 
-### 2b. Propostas com valores
-Rode também `supabase/migrations/20261111010000_propostas.sql` no SQL Editor. Ele cria os campos de planos, preços e condições usados na página de proposta.
+### 2b. Planos e valores
+Rode também `supabase/migrations/20261111010000_propostas.sql` no SQL Editor. Ele cria os campos de planos, preços e condições. Os valores só aparecem nas mensagens de WhatsApp, nunca no site.
 
 ### 3. Criar seu usuário
 1. **Authentication > Users > Add user > Create new user**: coloque seu e-mail e uma senha, marque **Auto Confirm User**.
@@ -63,7 +63,7 @@ Sem ela o sistema funciona do mesmo jeito: você usa **Adicionar empresas** (cad
 3. **Buscar empresas**: escolha o tipo, a cidade e o bairro e clique em **PESQUISAR EMPRESAS**.
 4. **Fila de envio**: revise a mensagem e o site ao lado, clique em **Enviar no WhatsApp e ir para a próxima**, e aperte enviar no WhatsApp.
 5. **Dashboard**: acompanhe quem abriu o site demo e chame de novo.
-6. **Propostas**: em *Configurações > Propostas e valores* defina seu WhatsApp, os planos, preços, prazos e o que cada um inclui. Em cada empresa use *Ver proposta*, *Copiar link da proposta* ou *Enviar proposta*. O cliente vê os planos com a cara do site dele e o botão *Escolher este plano* abre o seu WhatsApp. O painel mostra quantas vezes a proposta foi aberta.
+6. **Planos e valores**: em *Configurações > Planos e valores* defina os planos, preços, prazos, o que cada um inclui e as condições. Em cada empresa use *Enviar proposta no WhatsApp* (manda a proposta com os valores por mensagem) ou *Copiar proposta*. Os preços nunca aparecem no site demo.
 7. **Melhorar mensagem**: na fila e nos detalhes da empresa, troque o estilo com um clique: *Curta e direta*, *Elogio primeiro*, *Pedir permissão (sem link)*, *Mostrar o ganho*, e as de acompanhamento (*Cobrar resposta*, *Depois que abriu o site*, *Quando perguntar o preço*). Todas começam com bom dia/boa tarde/boa noite conforme o horário.
 
 ---
