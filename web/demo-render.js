@@ -159,8 +159,8 @@ const FOTOS = {
   "photo-1605437241278-c1806d14a4d9"
  ],
  "salao": [
-  "photo-1781450090585-1a511b7066d9",
   "photo-1774660810725-fb04e002003d",
+  "photo-1781450090585-1a511b7066d9",
   "photo-1560869713-7d0a29430803"
  ],
  "manicure": [
@@ -210,9 +210,9 @@ function dados(l) {
   const nome = nomeCurto(l.nome);
   const num = numeroWhats(l);
   const tel = digitos(l.telefone).replace(/^0+/, "");
-  const contato = num ? { url: `https://wa.me/${num}`, ic: "zap", rot: "Chamar no WhatsApp", curto: "WhatsApp" }
-    : l.telefone ? { url: `tel:+55${tel}`, ic: "fone", rot: `Ligar ${l.telefone}`, curto: "Ligar" }
-    : { url: linkMaps(l), ic: "pin", rot: "Ver no Google Maps", curto: "Mapa" };
+  const contato = num ? { url: `https://wa.me/${num}`, ic: "zap", rot: "Chamar no WhatsApp", curto: "pelo WhatsApp" }
+    : l.telefone ? { url: `tel:+55${tel}`, ic: "fone", rot: `Ligar ${l.telefone}`, curto: "por telefone" }
+    : { url: linkMaps(l), ic: "pin", rot: "Ver no Google Maps", curto: "no local" };
   const temNota = l.nota != null && l.avaliacoes;
   const rua = String(l.endereco || "").split(" - ")[0];
   const lugar = [l.bairro, l.cidade].filter(Boolean).join(", ");
@@ -298,7 +298,7 @@ function oficina(x, l) {
     <aside class="os" aria-label="${esc(d.quadro)}">
       <div class="os-cab"><b>${esc(d.quadro)}</b><span>${esc(x.nome)}</span></div>
       <ul>${itens}</ul>
-      <a class="os-pe" href="${esc(x.contato.url)}">Pedir orçamento pelo ${esc(x.contato.curto)}</a>
+      <a class="os-pe" href="${esc(x.contato.url)}">Pedir orçamento ${esc(x.contato.curto)}</a>
     </aside>
   </header>
   <main>
