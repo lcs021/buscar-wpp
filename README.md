@@ -60,6 +60,7 @@ Sem ela o sistema funciona do mesmo jeito: você usa **Adicionar empresas** (cad
 3. **Buscar empresas**: escolha o tipo, a cidade e o bairro e clique em **PESQUISAR EMPRESAS**.
 4. **Fila de envio**: revise a mensagem e o site ao lado, clique em **Enviar no WhatsApp e ir para a próxima**, e aperte enviar no WhatsApp.
 5. **Dashboard**: acompanhe quem abriu o site demo e chame de novo.
+6. **Melhorar mensagem**: na fila e nos detalhes da empresa, troque o estilo com um clique: *Curta e direta*, *Elogio primeiro*, *Pedir permissão (sem link)*, *Mostrar o ganho*, e as de acompanhamento (*Cobrar resposta*, *Depois que abriu o site*, *Quando perguntar o preço*). Todas começam com bom dia/boa tarde/boa noite conforme o horário.
 
 ---
 

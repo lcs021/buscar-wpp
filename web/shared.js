@@ -331,7 +331,9 @@ export function qualificarLocal(l, perfil = {}) {
   if (!l.telefone && !l.whatsapp) m.push("sem telefone");
   if (m.length) return { qualificado: false, motivo: "Fora do filtro: " + m.join("; ") };
   const prova = l.nota != null && l.avaliacoes != null ? `nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações` : "cadastrada por você";
-  return { qualificado: true, motivo: `Bom negócio (${prova}) e ${(FALHAS[l.status_site] || "").toLowerCase()}.` };
+  const falha = { sem_site: "não tem site", instagram: "o site da ficha é só o Instagram", facebook: "o site da ficha é só o Facebook",
+    whatsapp: "o site da ficha é só o WhatsApp", link_agregador: "o site da ficha é só um link de pedido/agenda/cardápio" }[l.status_site] || "não tem site";
+  return { qualificado: true, motivo: `Bom negócio (${prova}) e ${falha}.` };
 }
 // Monta a linha do banco a partir dos campos digitados/importados
 export function montarLead(c, perfil = {}) {
@@ -402,4 +404,60 @@ export function lerCSV(texto) {
       instagram: v(r, ix.instagram), facebook: v(r, ix.facebook), origem: "planilha",
     };
   }).filter((c) => c.nome);
+}
+
+// ------------------------------------------------------------------ estilos de mensagem ("melhorar mensagem")
+export function saudacao(d = new Date()) {
+  const h = d.getHours();
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+
+// Gancho curto sobre a falha encontrada no Google
+function gancho(l) {
+  return {
+    sem_site: "a ficha de vocês no Google ainda não tem site",
+    instagram: 'o botão "Site" da ficha de vocês no Google abre só o Instagram',
+    facebook: 'o botão "Site" da ficha de vocês no Google abre só o Facebook',
+    whatsapp: 'o botão "Site" da ficha de vocês no Google leva só para o WhatsApp',
+    link_agregador: "o link da ficha de vocês no Google vai direto para o app de pedido/agenda, sem uma página da marca",
+    com_site: "dá para deixar o site de vocês mais forte no celular",
+  }[l.status_site] || "a ficha de vocês no Google ainda não tem site";
+}
+
+export const ESTILOS = [
+  { id: "padrao", rotulo: "Padrão", tipo: "primeiro" },
+  { id: "curta", rotulo: "Curta e direta", tipo: "primeiro" },
+  { id: "elogio", rotulo: "Elogio primeiro", tipo: "primeiro" },
+  { id: "pergunta", rotulo: "Pedir permissão (sem link)", tipo: "primeiro" },
+  { id: "ganho", rotulo: "Mostrar o ganho", tipo: "primeiro" },
+  { id: "seguimento", rotulo: "Cobrar resposta (2–3 dias depois)", tipo: "seguimento" },
+  { id: "abriu", rotulo: "Depois que abriu o site", tipo: "seguimento" },
+  { id: "preco", rotulo: "Quando perguntar o preço", tipo: "resposta" },
+];
+
+export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
+  const eu = perfil.nome_vendedor?.trim() || "[SEU NOME]";
+  const cidade = perfil.cidade_padrao?.trim() || l.cidade || "";
+  const emp = nomeCurto(l.nome);
+  const oi = `${saudacao()}! Aqui é o ${eu}${cidade ? `, de ${cidade}` : ""}.`;
+  const prova = l.nota && l.avaliacoes ? `nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações` : "";
+  const lk = link || "[link do site demo]";
+  switch (estilo) {
+    case "curta":
+      return `${oi} Vi ${emp} no Google e reparei que ${gancho(l)}. Fiz um modelo de site para vocês verem como ficaria:\n\n${lk}\n\nSem compromisso. O que acharam?`;
+    case "elogio":
+      return `${oi} ${prova ? `Parabéns pelo trabalho: ${prova} no Google não é pra qualquer um!` : `Parabéns pelo trabalho de vocês!`} Só reparei que ${gancho(l)}, e muita gente que pesquisa acaba indo pra concorrência por isso.\n\nMontei um modelo de site com a cara de ${emp}, só pra mostrar como ficaria:\n\n${lk}\n\nÉ só uma demonstração, sem compromisso. Faz sentido pra vocês?`;
+    case "pergunta":
+      return `${oi} Vi ${emp} no Google Maps${prova ? ` (${prova})` : ""} e reparei que ${gancho(l)}.\n\nMontei um modelo de site com o nome e as informações de vocês, só pra mostrar como ficaria. Posso te mandar o link pra você dar uma olhada? Sem compromisso.`;
+    case "ganho":
+      return `${oi} Quando alguém pesquisa "${(TEMAS[l.nicho]?.rotulo || "comércio").toLowerCase()} em ${l.bairro || cidade || "sua região"}" no Google, quem tem site passa mais confiança e recebe mais contato. Vi que ${gancho(l)}${prova ? `, mesmo com ${prova}` : ""}.\n\nPor isso montei um modelo de site para ${emp}, com botão direto pro WhatsApp e mapa:\n\n${lk}\n\nDá uma olhada no celular, sem compromisso. Se curtir, deixo pronto rapidinho.`;
+    case "seguimento":
+      return `${oi} Passando só pra saber se você conseguiu ver o modelo de site que montei para ${emp}:\n\n${lk}\n\nSe quiser, ajusto cores, fotos e serviços do jeito de vocês. Posso te explicar como funciona?`;
+    case "abriu":
+      return `${oi} E aí, o que achou do modelo de site de ${emp}? Ainda dá pra trocar fotos, cores e colocar os serviços e preços de vocês.\n\n${lk}\n\nQuer que eu te mostre como ficaria a versão final?`;
+    case "preco":
+      return `Ótima pergunta! O site fica com a cara de ${emp}: fotos reais, serviços, botão de WhatsApp, mapa e funciona bem no celular. O valor é R$ [VALOR] (pagamento único) e eu entrego em até [PRAZO] dias depois de receber as fotos e informações.\n\nSe quiser, já te mando a lista do que preciso pra começar. Pode ser?`;
+    default:
+      return mensagem(l, perfil, link).replace(/^Olá, tudo bem\?/, `${saudacao()}, tudo bem?`);
+  }
 }

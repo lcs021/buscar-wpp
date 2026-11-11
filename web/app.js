@@ -1,5 +1,5 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkDemo, mensagem, renderDemo, nomeCurto, montarLead, lerCSV } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkDemo, mensagem, renderDemo, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
 
 const $app = document.getElementById("app");
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
@@ -17,6 +17,7 @@ const st = {
   busca: null, buscando: false, erroBusca: "",
   form: { tipo: "", cidade: "", uf: "", bairro: "", quantidade: 20 },
   filaPos: 0, menu: false,
+  estilo: {},             // estilo de mensagem escolhido por lead
 };
 
 // ------------------------------------------------------------------ utilidades
@@ -39,7 +40,13 @@ const quando = (iso) => {
   if (s < 86400) return `há ${Math.floor(s / 3600)} h`; return new Date(iso).toLocaleDateString("pt-BR");
 };
 const leadPorId = (id) => st.leads.find((l) => l.id === id);
-const msgDe = (l) => l.mensagem ?? mensagem(l, st.perfil, linkDemo(l.slug));
+const msgAuto = (l) => mensagemEstilo(st.estilo[l.id] || "padrao", l, st.perfil, linkDemo(l.slug));
+const msgDe = (l) => l.mensagem ?? msgAuto(l);
+function chipsEstilo(l, alvo, tipos) {
+  const atual = st.estilo[l.id] || (l.mensagem != null ? "" : "padrao");
+  return `<div class="estilos"><span class="sub">Melhorar mensagem:</span>${ESTILOS.filter((e) => tipos.includes(e.tipo)).map((e) =>
+    `<button type="button" class="chip${atual === e.id ? " on" : ""}" data-estilo="${e.id}" data-id="${l.id}" data-alvo="${alvo}">${e.rotulo}</button>`).join("")}</div>`;
+}
 const linkWhats = (l, texto) => `https://wa.me/${numeroWhats(l)}?text=${encodeURIComponent(texto)}`;
 const filaLista = () => st.leads.filter((l) => l.qualificado && l.status === "novo" && numeroWhats(l))
   .sort((a, b) => (b.avaliacoes ?? 0) - (a.avaliacoes ?? 0));
@@ -75,7 +82,7 @@ async function atualizar(id, dados, msg) {
 function enviarWhats(l, texto) {
   window.open(linkWhats(l, texto), "_blank", "noopener");
   const dados = { status: "enviado", enviado_em: new Date().toISOString(), demo_publicada: true };
-  if (texto !== mensagem(l, st.perfil, linkDemo(l.slug))) dados.mensagem = texto;
+  if (texto !== mensagemEstilo("padrao", l, st.perfil, linkDemo(l.slug))) dados.mensagem = texto;
   return atualizar(l.id, dados, "Marcado como enviado. Confira o envio no WhatsApp.");
 }
 
@@ -301,6 +308,7 @@ function telaFila() {
         <div class="sub">${esc(l.categoria)} · ${esc(l.bairro || l.cidade)} · <span class="estrela">★</span> ${notaBR(l.nota)} (${milhar(l.avaliacoes)})</div></div>
         <span class="esp"></span>${seloFalha(l)}</div>
       <p style="color:var(--t2);margin:0 0 12px">${esc(l.motivo)}</p>
+      ${chipsEstilo(l, "fila-msg", ["primeiro"])}
       <div class="bloco"><label>Mensagem (pode editar antes de enviar)</label><textarea class="in" id="fila-msg" data-dono="${l.id}" rows="9">${esc(msgDe(l))}</textarea></div>
       <div class="linha-btns">
         <button class="btn z g" data-acao="fila-enviar" data-id="${l.id}">${I.zap} Enviar no WhatsApp e ir para a próxima</button>
@@ -339,6 +347,7 @@ function telaGaveta() {
       <button class="btn" data-acao="copiar-link" data-id="${l.id}">Copiar link da demo</button>
       <button class="btn" data-acao="favorito" data-id="${l.id}">${l.favorito ? "★ Favorito" : "☆ Favoritar"}</button>
     </div>
+    ${chipsEstilo(l, "det-msg", l.status === "novo" ? ["primeiro", "resposta"] : ["seguimento", "resposta", "primeiro"])}
     <div class="bloco"><label>Mensagem ${l.mensagem != null ? "(editada)" : "(automática)"}</label><textarea class="in" id="det-msg" data-dono="${l.id}" rows="9">${esc(msgDe(l))}</textarea>
       <div class="linha-btns" style="margin-top:8px">
         ${num ? `<button class="btn z" data-acao="enviar" data-id="${l.id}">${I.zap} Enviar no WhatsApp</button>` : `<a class="btn" href="tel:+55${digitos(l.telefone)}">Ligar</a>`}
@@ -411,11 +420,20 @@ async function buscar(ev) {
 }
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-ir],[data-acao],[data-abrir],[data-filtro],[data-tipo]");
+  const el = ev.target.closest("[data-ir],[data-acao],[data-abrir],[data-filtro],[data-tipo],[data-estilo]");
   if (!el) return;
   if (el.dataset.ir) { location.hash = el.dataset.ir; return; }
   if (el.dataset.abrir) { ev.preventDefault(); st.aberto = el.dataset.abrir; return render(); }
   if (el.dataset.filtro) { st.filtro = el.dataset.filtro; return render(); }
+  if (el.dataset.estilo) {
+    const ld = leadPorId(el.dataset.id); const ta = document.getElementById(el.dataset.alvo);
+    if (!ld || !ta) return;
+    st.estilo[ld.id] = el.dataset.estilo;
+    ta.value = mensagemEstilo(el.dataset.estilo, ld, st.perfil, linkDemo(ld.slug));
+    el.parentElement.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c === el));
+    if (/\[VALOR\]|\[PRAZO\]/.test(ta.value)) toast("Troque [VALOR] e [PRAZO] antes de enviar.");
+    return;
+  }
   if (el.dataset.tipo) { st.form.tipo = el.dataset.tipo; const i = document.querySelector('#f-busca [name="tipo"]'); if (i) i.value = el.dataset.tipo; document.querySelectorAll("[data-tipo]").forEach((c) => c.classList.toggle("on", c === el)); return; }
   const id = el.dataset.id, l = id && leadPorId(id), a = el.dataset.acao;
   if (a === "sair") { await sb.sair(); return render(); }
