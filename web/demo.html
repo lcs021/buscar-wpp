@@ -16,10 +16,11 @@
   <script type="module">
     import { rpcPublica } from "./sb.js";
     import { renderDemo } from "./shared.js";
-    const slug = new URLSearchParams(location.search).get("s") || "";
+    const qs = new URLSearchParams(location.search);
+    const slug = qs.get("s") || "";
     const falha = (t) => { document.title = "Página não encontrada"; document.getElementById("msg").textContent = t; };
     try {
-      const lead = await rpcPublica("demo_publica", { p_slug: slug, p_contar: true });
+      const lead = await rpcPublica("demo_publica", { p_slug: slug, p_contar: !qs.has("p") });
       if (!lead) falha("Esta demonstração não está disponível.");
       else { document.open(); document.write(renderDemo(lead)); document.close(); }
     } catch (e) {

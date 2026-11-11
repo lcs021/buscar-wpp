@@ -1,5 +1,6 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkDemo, mensagem, renderDemo, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkDemo, mensagem, renderDemo, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo, linkProposta } from "./shared.js";
+import { PLANOS_PADRAO, reais } from "./proposta-render.js";
 
 const $app = document.getElementById("app");
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
@@ -10,7 +11,7 @@ const COR_STATUS = { novo: "c", enviado: "az", respondeu: "am", interessado: "v"
 
 const st = {
   pagina: (location.hash || "#dashboard").slice(1),
-  perfil: { nome_vendedor: "", cidade_padrao: "", uf_padrao: "", nota_minima: 4.5, avaliacoes_minimas: 20 },
+  perfil: { nome_vendedor: "", cidade_padrao: "", uf_padrao: "", nota_minima: 4.5, avaliacoes_minimas: 20, whatsapp_vendedor: "", validade_dias: 7, condicoes: "", planos: PLANOS_PADRAO },
   leads: [], buscas: [], carregado: false,
   filtro: "qualificados", status: "", texto: "", nicho: "",
   aberto: null,           // id do lead na gaveta
@@ -61,7 +62,7 @@ async function carregar() {
     sb.db("leads?select=*&order=created_at.desc&limit=5000"),
     sb.db("buscas?select=*&order=created_at.desc&limit=8"),
   ]);
-  if (perfis?.[0]) st.perfil = perfis[0];
+  if (perfis?.[0]) st.perfil = { ...st.perfil, ...perfis[0], planos: perfis[0].planos || st.perfil.planos };
   st.leads = leads || []; st.buscas = buscas || []; st.carregado = true;
   st.form.cidade ||= st.perfil.cidade_padrao; st.form.uf ||= st.perfil.uf_padrao;
 }
@@ -347,6 +348,15 @@ function telaGaveta() {
       <button class="btn" data-acao="copiar-link" data-id="${l.id}">Copiar link da demo</button>
       <button class="btn" data-acao="favorito" data-id="${l.id}">${l.favorito ? "★ Favorito" : "☆ Favoritar"}</button>
     </div>
+    <div class="bloco prop"><label>Proposta com valores</label>
+      <p class="sub" style="margin:0 0 8px">${(st.perfil.planos || []).map((x) => `${esc(x.nome)}: ${reais(x.preco)}`).join(" · ") || "Cadastre seus planos em Configurações."}
+        ${l.proposta_visualizacoes ? `<br>${I.olho} proposta aberta ${l.proposta_visualizacoes}x · último ${quando(l.proposta_ultima_visualizacao)}` : ""}</p>
+      <div class="linha-btns">
+        <button class="btn" data-acao="ver-proposta" data-id="${l.id}">Ver proposta</button>
+        <button class="btn" data-acao="copiar-proposta" data-id="${l.id}">Copiar link da proposta</button>
+        ${num ? `<button class="btn z" data-acao="enviar-proposta" data-id="${l.id}">${I.zap} Enviar proposta</button>` : ""}
+      </div>
+    </div>
     ${chipsEstilo(l, "det-msg", l.status === "novo" ? ["primeiro", "resposta"] : ["seguimento", "resposta", "primeiro"])}
     <div class="bloco"><label>Mensagem ${l.mensagem != null ? "(editada)" : "(automática)"}</label><textarea class="in" id="det-msg" data-dono="${l.id}" rows="9">${esc(msgDe(l))}</textarea>
       <div class="linha-btns" style="margin-top:8px">
@@ -380,6 +390,26 @@ function telaConfig() {
     </div>
     <p class="sub">Vale para as próximas buscas. Empresa qualificada = nota e avaliações acima disso, com telefone, e sem site próprio.</p>
     <div class="linha-btns" style="margin-top:10px"><button class="btn p" type="submit">Salvar</button></div>
+  </form>
+  <form class="card" id="f-propostas"><h3>Propostas e valores</h3>
+    <p class="sub" style="margin:-6px 0 12px">Aparecem na página de proposta de cada empresa e na mensagem "Quando perguntar o preço". O botão "Quero este plano" abre o seu WhatsApp.</p>
+    <div class="form-busca" style="grid-template-columns:2fr 1fr">
+      <div class="campo"><label>Seu WhatsApp (para o cliente aceitar)</label><input class="in" name="whatsapp_vendedor" value="${esc(p.whatsapp_vendedor || "")}" placeholder="(21) 99999-9999"></div>
+      <div class="campo"><label>Validade (dias)</label><input class="in" name="validade_dias" type="number" min="1" max="90" value="${p.validade_dias || 7}"></div>
+    </div>
+    ${(p.planos || PLANOS_PADRAO).map((pl, i) => `<fieldset class="plano-ed">
+      <legend>Plano ${i + 1}</legend>
+      <div class="form-busca" style="grid-template-columns:1.4fr 1fr 1.4fr 1fr">
+        <div class="campo"><label>Nome</label><input class="in" name="p${i}_nome" value="${esc(pl.nome)}"></div>
+        <div class="campo"><label>Preço (R$)</label><input class="in" name="p${i}_preco" inputmode="decimal" value="${esc(String(pl.preco).replace(".", ","))}"></div>
+        <div class="campo"><label>Parcelas / observação</label><input class="in" name="p${i}_parcelas" value="${esc(pl.parcelas || "")}"></div>
+        <div class="campo"><label>Prazo</label><input class="in" name="p${i}_prazo" value="${esc(pl.prazo || "")}"></div>
+      </div>
+      <div class="campo" style="margin-top:8px"><label>O que inclui (um item por linha)</label><textarea class="in" name="p${i}_itens" rows="4">${esc((pl.itens || []).join("\n"))}</textarea></div>
+      <label class="chk"><input type="checkbox" name="p${i}_destaque"${pl.destaque ? " checked" : ""}> Marcar como recomendado</label>
+    </fieldset>`).join("")}
+    <div class="campo" style="margin-top:12px"><label>Condições de pagamento</label><textarea class="in" name="condicoes" rows="3">${esc(p.condicoes || "")}</textarea></div>
+    <div class="linha-btns" style="margin-top:12px"><button class="btn p" type="submit">Salvar propostas</button><button class="btn" type="button" data-acao="plano-padrao">Restaurar sugestão de valores</button></div>
   </form>
   <div class="card"><h3>Exportar</h3><div class="linha-btns">
     <button class="btn" data-acao="csv" data-qual="1">CSV das qualificadas</button><button class="btn" data-acao="csv">CSV de todas</button></div></div>
@@ -452,6 +482,21 @@ document.addEventListener("click", async (ev) => {
     navigator.clipboard?.writeText(linkDemo(l.slug)).then(() => toast("Link copiado (demo publicada)."), () => toast(linkDemo(l.slug)));
     return;
   }
+  if (a === "ver-proposta" || a === "copiar-proposta" || a === "enviar-proposta") {
+    const link = linkProposta(l.slug);
+    if (a === "ver-proposta") { const w = window.open(link + "&p=1", "_blank", "noopener"); if (!l.demo_publicada) await atualizar(l.id, { demo_publicada: true }, "Demo e proposta publicadas."); return w; }
+    if (a === "enviar-proposta") {
+      const texto = mensagemEstilo("proposta", l, st.perfil, linkDemo(l.slug));
+      window.open(linkWhats(l, texto), "_blank", "noopener");
+      const dados = { demo_publicada: true };
+      if (["novo", "enviado"].includes(l.status)) dados.status = "respondeu";
+      return atualizar(l.id, dados, "Proposta aberta no WhatsApp.");
+    }
+    if (!l.demo_publicada) await atualizar(l.id, { demo_publicada: true });
+    navigator.clipboard?.writeText(link).then(() => toast("Link da proposta copiado."), () => toast(link));
+    return;
+  }
+  if (a === "plano-padrao") { st.perfil = { ...st.perfil, planos: PLANOS_PADRAO }; toast("Sugestão de planos restaurada. Clique em Salvar propostas."); return render(); }
   if (a === "copiar-msg") { navigator.clipboard?.writeText(document.getElementById("det-msg").value).then(() => toast("Mensagem copiada.")); return; }
   if (a === "salvar-msg") return atualizar(l.id, { mensagem: document.getElementById("det-msg").value }, "Mensagem salva.");
   if (a === "msg-auto") return atualizar(l.id, { mensagem: null }, "Voltou para a mensagem automática.");
@@ -486,6 +531,25 @@ document.addEventListener("submit", async (ev) => {
       toast(l.qualificado ? "Empresa adicionada e qualificada." : "Empresa adicionada (fora do filtro: " + l.motivo.replace("Fora do filtro: ", "") + ").");
       st.aberto = l.id; render();
     } catch (e) { toast(e.message, true); }
+  }
+  if (ev.target.id === "f-propostas") {
+    ev.preventDefault();
+    const f = new FormData(ev.target);
+    const planos = [0, 1, 2].map((i) => ({
+      nome: String(f.get(`p${i}_nome`) || "").trim(),
+      preco: parseFloat(String(f.get(`p${i}_preco`) || "0").replace(/\./g, "").replace(",", ".")) || 0,
+      parcelas: String(f.get(`p${i}_parcelas`) || "").trim(),
+      prazo: String(f.get(`p${i}_prazo`) || "").trim(),
+      destaque: f.get(`p${i}_destaque`) === "on",
+      itens: String(f.get(`p${i}_itens`) || "").split("\n").map((x) => x.trim()).filter(Boolean),
+    })).filter((x) => x.nome);
+    const corpo = { user_id: sb.usuario().id, planos, whatsapp_vendedor: String(f.get("whatsapp_vendedor") || "").trim(),
+      validade_dias: Math.max(1, Math.min(90, parseInt(f.get("validade_dias"), 10) || 7)), condicoes: String(f.get("condicoes") || "").trim() };
+    try {
+      const [pf] = await sb.db("perfis?on_conflict=user_id", { method: "POST", body: corpo, prefer: "resolution=merge-duplicates,return=representation" });
+      st.perfil = pf; toast("Propostas salvas."); render();
+    } catch (e) { toast(e.message.includes("column") ? "Rode o SQL de propostas no Supabase (veja o README)." : e.message, true); }
+    return;
   }
   if (ev.target.id === "f-perfil") {
     ev.preventDefault();

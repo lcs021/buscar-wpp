@@ -120,6 +120,7 @@ export function iniciais(nome) {
 }
 // "Legendários Barbearia | Barbearia em Nova Iguaçu" -> "Legendários Barbearia"
 export const nomeCurto = (n) => String(n || "").split(/\s[|•·]\s/)[0].trim();
+export const linkProposta = (slug) => new URL(`proposta.html?s=${encodeURIComponent(slug)}`, location.href.replace(/[#?].*$/, "")).href;
 export const linkDemo = (slug) => new URL(`demo.html?s=${encodeURIComponent(slug)}`, location.href.replace(/[#?].*$/, "")).href;
 
 // ------------------------------------------------------------------ mensagem
@@ -301,6 +302,7 @@ export const ESTILOS = [
   { id: "seguimento", rotulo: "Cobrar resposta (2–3 dias depois)", tipo: "seguimento" },
   { id: "abriu", rotulo: "Depois que abriu o site", tipo: "seguimento" },
   { id: "preco", rotulo: "Quando perguntar o preço", tipo: "resposta" },
+  { id: "proposta", rotulo: "Mandar a proposta", tipo: "resposta" },
 ];
 
 export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
@@ -310,6 +312,7 @@ export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
   const oi = `${saudacao()}! Aqui é o ${eu}${cidade ? `, de ${cidade}` : ""}.`;
   const prova = l.nota && l.avaliacoes ? `nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações` : "";
   const lk = link || "[link do site demo]";
+  const lkProp = l.slug ? linkProposta(l.slug) : "[link da proposta]";
   switch (estilo) {
     case "curta":
       return `${oi} Vi ${emp} no Google e reparei que ${gancho(l)}. Fiz um modelo de site para vocês verem como ficaria:\n\n${lk}\n\nSem compromisso. O que acharam?`;
@@ -323,8 +326,15 @@ export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
       return `${oi} Passando só pra saber se você conseguiu ver o modelo de site que montei para ${emp}:\n\n${lk}\n\nSe quiser, ajusto cores, fotos e serviços do jeito de vocês. Posso te explicar como funciona?`;
     case "abriu":
       return `${oi} E aí, o que achou do modelo de site de ${emp}? Ainda dá pra trocar fotos, cores e colocar os serviços e preços de vocês.\n\n${lk}\n\nQuer que eu te mostre como ficaria a versão final?`;
-    case "preco":
-      return `Ótima pergunta! O site fica com a cara de ${emp}: fotos reais, serviços, botão de WhatsApp, mapa e funciona bem no celular. O valor é R$ [VALOR] (pagamento único) e eu entrego em até [PRAZO] dias depois de receber as fotos e informações.\n\nSe quiser, já te mando a lista do que preciso pra começar. Pode ser?`;
+    case "preco": {
+      const pl = (perfil.planos || []).filter((x) => x && x.nome);
+      const rs = (n) => "R$ " + Number(n || 0).toLocaleString("pt-BR");
+      if (!pl.length) return `Ótima pergunta! O site fica com a cara de ${emp}: fotos reais, serviços, botão de WhatsApp, mapa e funciona bem no celular. O valor é R$ [VALOR] e eu entrego em até [PRAZO] dias depois de receber as fotos e informações. Pode ser?`;
+      const linhas = pl.map((x) => `• ${x.nome}: ${rs(x.preco)}${x.parcelas ? ` (${x.parcelas})` : ""}${x.prazo ? `, entrega em ${x.prazo}` : ""}`).join("\n");
+      return `Ótima pergunta! Para ${emp} eu tenho estes planos:\n\n${linhas}\n\nDeixei tudo explicado aqui, com o que entra em cada um:\n${lkProp}\n\nQual faz mais sentido pra vocês?`;
+    }
+    case "proposta":
+      return `${oi} Como combinamos, aqui está a proposta do site de ${emp}, com os planos, valores e prazos:\n\n${lkProp}\n\nO modelo do site continua neste link: ${lk}\n\nQualquer dúvida é só me chamar por aqui.`;
     default:
       return mensagem(l, perfil, link).replace(/^Olá, tudo bem\?/, `${saudacao()}, tudo bem?`);
   }

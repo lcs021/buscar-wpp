@@ -117,3 +117,7 @@ dl.info{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin:0 0 14p
 }
 
 .estilos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}.estilos .sub{margin:0 4px 0 0}
+
+.plano-ed{border:1px solid var(--linha2);border-radius:var(--r);padding:12px 14px 14px;margin:12px 0 0}.plano-ed legend{color:var(--t2);font-size:12px;padding:0 6px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--t2)}.chk input{accent-color:var(--v)}
+.bloco.prop{border:1px solid var(--linha2);border-radius:var(--r);padding:12px 14px}

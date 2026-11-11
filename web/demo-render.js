@@ -203,6 +203,9 @@ const foto = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit
 // largura média de cada letra no título (em), para o nome caber sem quebrar no meio da palavra
 const FATOR = {"barbearia": 0.55, "hamburgueria": 0.86, "pizzaria": 0.62, "acai": 0.62, "padaria": 0.64, "restaurante": 0.6, "oficina": 0.56, "estetica_auto": 0.56, "salao": 0.5, "manicure": 0.5, "dentista": 0.68, "clinica": 0.68, "pet": 0.6, "loja": 0.56, "academia": 0.62, "generico": 0.68};
 
+// Direção de arte do nicho (usada também pela página de proposta)
+export const temaVisual = (nicho) => ({ ...(D[nicho] || D.generico), fotos: (FOTOS[nicho] || FOTOS.generico).map((id) => foto(id, 1000)) });
+
 // ---------------------------------------------------------------- peças comuns
 function dados(l) {
   const t = TEMAS[l.nicho] || TEMAS.generico;

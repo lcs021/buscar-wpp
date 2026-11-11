@@ -23,6 +23,9 @@ Tudo roda no Supabase (banco, login e busca) e numa hospedagem grátis de site e
 2. Abra o arquivo `supabase/migrations/20261111000000_lead_finder.sql`, copie tudo, cole e clique em **Run**.
    Tem que aparecer *Success*. Pode rodar de novo sem problema.
 
+### 2b. Propostas com valores
+Rode também `supabase/migrations/20261111010000_propostas.sql` no SQL Editor. Ele cria os campos de planos, preços e condições usados na página de proposta.
+
 ### 3. Criar seu usuário
 1. **Authentication > Users > Add user > Create new user**: coloque seu e-mail e uma senha, marque **Auto Confirm User**.
 2. Recomendado: em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**. Assim só você entra.
@@ -60,7 +63,8 @@ Sem ela o sistema funciona do mesmo jeito: você usa **Adicionar empresas** (cad
 3. **Buscar empresas**: escolha o tipo, a cidade e o bairro e clique em **PESQUISAR EMPRESAS**.
 4. **Fila de envio**: revise a mensagem e o site ao lado, clique em **Enviar no WhatsApp e ir para a próxima**, e aperte enviar no WhatsApp.
 5. **Dashboard**: acompanhe quem abriu o site demo e chame de novo.
-6. **Melhorar mensagem**: na fila e nos detalhes da empresa, troque o estilo com um clique: *Curta e direta*, *Elogio primeiro*, *Pedir permissão (sem link)*, *Mostrar o ganho*, e as de acompanhamento (*Cobrar resposta*, *Depois que abriu o site*, *Quando perguntar o preço*). Todas começam com bom dia/boa tarde/boa noite conforme o horário.
+6. **Propostas**: em *Configurações > Propostas e valores* defina seu WhatsApp, os planos, preços, prazos e o que cada um inclui. Em cada empresa use *Ver proposta*, *Copiar link da proposta* ou *Enviar proposta*. O cliente vê os planos com a cara do site dele e o botão *Escolher este plano* abre o seu WhatsApp. O painel mostra quantas vezes a proposta foi aberta.
+7. **Melhorar mensagem**: na fila e nos detalhes da empresa, troque o estilo com um clique: *Curta e direta*, *Elogio primeiro*, *Pedir permissão (sem link)*, *Mostrar o ganho*, e as de acompanhamento (*Cobrar resposta*, *Depois que abriu o site*, *Quando perguntar o preço*). Todas começam com bom dia/boa tarde/boa noite conforme o horário.
 
 ---
 
