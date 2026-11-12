@@ -19,6 +19,7 @@ const st = {
   form: { tipo: "", cidade: "", uf: "", bairro: "", quantidade: 20 },
   filaPos: 0, menu: false,
   estilo: {},             // estilo de mensagem escolhido por lead
+  sel: new Set(),         // leads marcados para ação em massa
 };
 
 // ------------------------------------------------------------------ utilidades
@@ -275,14 +276,59 @@ function telaLeads() {
     <select class="in" style="max-width:170px" id="sel-nicho"><option value="">Todos os nichos</option>${Object.entries(TEMAS).map(([k, t]) => `<option value="${k}"${st.nicho === k ? " selected" : ""}>${t.rotulo}</option>`).join("")}</select>
     <input class="in" style="max-width:220px" id="in-texto" placeholder="Filtrar por nome, bairro…" value="${esc(st.texto)}">
   </div>
-  <p class="sub" style="margin:-4px 0 10px">${lista.length} empresa(s)</p>
+  ${barraMassa(lista)}
   ${tabela(lista)}`;
+}
+
+function barraMassa(lista) {
+  const ids = new Set(lista.map((l) => l.id));
+  for (const id of st.sel) if (!ids.has(id)) st.sel.delete(id);   // mantém só o que está visível no filtro
+  const n = st.sel.size;
+  if (!n) return `<p class="sub" style="margin:-4px 0 10px">${lista.length} empresa(s) · marque as caixas para excluir ou tirar sites do ar em massa</p>`;
+  const noAr = lista.filter((l) => st.sel.has(l.id) && l.demo_publicada).length;
+  return `<div class="massa" role="region" aria-label="Ações em massa">
+    <b>${n} selecionada(s)</b><span class="sub">de ${lista.length}</span>
+    <span class="esp"></span>
+    <button class="btn" data-acao="massa-fora" ${noAr ? "" : "disabled"}>Tirar ${noAr || ""} site(s) do ar</button>
+    <button class="btn perigo cheio" data-acao="massa-excluir">Excluir ${n}</button>
+    <button class="btn" data-acao="massa-limpar">Limpar seleção</button>
+  </div>`;
+}
+
+const lotes = (arr, n = 80) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+
+async function massa(acao) {
+  const ids = [...st.sel];
+  if (!ids.length) return;
+  if (acao === "excluir") {
+    const nomes = ids.slice(0, 5).map((id) => "• " + nomeCurto(leadPorId(id)?.nome || "")).join("\n") + (ids.length > 5 ? `\n… e mais ${ids.length - 5}` : "");
+    if (!confirm(`Excluir ${ids.length} empresa(s) e os sites demo delas?\n\n${nomes}\n\nOs links enviados param de abrir. Não dá para desfazer (se aparecerem numa próxima busca, voltam como novas).`)) return;
+    try {
+      for (const g of lotes(ids)) await sb.db(`leads?id=in.(${g.join(",")})`, { method: "DELETE", prefer: "return=minimal" });
+      st.leads = st.leads.filter((l) => !st.sel.has(l.id));
+      if (st.busca) st.busca.leads = st.busca.leads.filter((l) => !st.sel.has(l.id));
+      toast(`${ids.length} excluída(s).`);
+    } catch (e) { toast(e.message, true); }
+  } else {
+    const alvo = ids.filter((id) => leadPorId(id)?.demo_publicada);
+    if (!alvo.length) return;
+    if (!confirm(`Tirar ${alvo.length} site(s) demo do ar? As empresas continuam na lista; os links param de abrir até você publicar de novo.`)) return;
+    try {
+      for (const g of lotes(alvo)) {
+        const novos = await sb.db(`leads?id=in.(${g.join(",")})`, { method: "PATCH", body: { demo_publicada: false } });
+        for (const n of novos || []) { const i = st.leads.findIndex((l) => l.id === n.id); if (i >= 0) st.leads[i] = n; }
+      }
+      toast(`${alvo.length} site(s) fora do ar.`);
+    } catch (e) { toast(e.message, true); }
+  }
+  st.sel.clear(); render();
 }
 
 function tabela(L) {
   if (!L.length) return `<div class="card vazio"><b>Nada por aqui</b>${st.leads.length ? "Nenhuma empresa neste filtro." : "Faça uma busca para começar."}</div>`;
-  return `<div class="tab-wrap"><table><thead><tr><th>Empresa</th><th>Presença digital</th><th>Contato</th><th>Status</th><th>Demo</th></tr></thead><tbody>
-  ${L.map((l) => `<tr data-abrir="${l.id}">
+  return `<div class="tab-wrap"><table><thead><tr><th class="ck"><input type="checkbox" data-sel="todos" aria-label="Selecionar todas desta lista"${L.every((l) => st.sel.has(l.id)) ? " checked" : ""}></th><th>Empresa</th><th>Presença digital</th><th>Contato</th><th>Status</th><th>Demo</th></tr></thead><tbody>
+  ${L.map((l) => `<tr data-abrir="${l.id}"${st.sel.has(l.id) ? ' class="marcada"' : ""}>
+    <td class="ck" data-sel="${l.id}"><input type="checkbox" data-sel="${l.id}" aria-label="Selecionar ${esc(nomeCurto(l.nome))}"${st.sel.has(l.id) ? " checked" : ""}></td>
     <td><div class="nome">${l.favorito ? '<span class="estrela">★</span> ' : ""}${esc(nomeCurto(l.nome))}</div>
       <div class="sub">${esc(l.categoria || TEMAS[l.nicho]?.rotulo || "")} · ${esc(l.bairro || l.cidade)} · <span class="estrela">★</span> ${notaBR(l.nota)} (${milhar(l.avaliacoes)})</div>
       ${l.qualificado ? "" : `<div class="sub">${esc(l.motivo)}</div>`}</td>
@@ -446,8 +492,14 @@ async function buscar(ev) {
 }
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-ir],[data-acao],[data-abrir],[data-filtro],[data-tipo],[data-estilo]");
+  const el = ev.target.closest("[data-sel],[data-ir],[data-acao],[data-abrir],[data-filtro],[data-tipo],[data-estilo]");
   if (!el) return;
+  if (el.dataset.sel) {
+    const lista = filtrar(st.leads);
+    if (el.dataset.sel === "todos") { const tudo = lista.every((l) => st.sel.has(l.id)); lista.forEach((l) => (tudo ? st.sel.delete(l.id) : st.sel.add(l.id))); }
+    else st.sel.has(el.dataset.sel) ? st.sel.delete(el.dataset.sel) : st.sel.add(el.dataset.sel);
+    return render();
+  }
   if (el.dataset.ir) { location.hash = el.dataset.ir; return; }
   if (el.dataset.abrir) { ev.preventDefault(); st.aberto = el.dataset.abrir; return render(); }
   if (el.dataset.filtro) { st.filtro = el.dataset.filtro; return render(); }
@@ -466,6 +518,9 @@ document.addEventListener("click", async (ev) => {
   if (a === "menu") { st.menu = !st.menu; return render(); }
   if (a === "fechar") { st.aberto = null; return render(); }
   if (a === "csv") return csv(el.dataset.qual);
+  if (a === "massa-limpar") { st.sel.clear(); return render(); }
+  if (a === "massa-excluir") return massa("excluir");
+  if (a === "massa-fora") return massa("fora");
   if (a === "fila-pular") { st.filaPos++; if (st.filaPos >= filaLista().length) st.filaPos = 0; return render(); }
   if (!l) return;
   if (a === "fila-enviar") { await enviarWhats(l, document.getElementById("fila-msg").value); return; }
@@ -492,8 +547,8 @@ document.addEventListener("click", async (ev) => {
   if (a === "msg-auto") return atualizar(l.id, { mensagem: null }, "Voltou para a mensagem automática.");
   if (a === "salvar-obs") return atualizar(l.id, { observacoes: document.getElementById("det-obs").value }, "Observação salva.");
   if (a === "excluir") {
-    if (!confirm(`Excluir ${nomeCurto(l.nome)}? Se ela aparecer numa próxima busca, volta como nova.`)) return;
-    try { await sb.db(`leads?id=eq.${l.id}`, { method: "DELETE", prefer: "return=minimal" }); st.leads = st.leads.filter((x) => x.id !== l.id); st.aberto = null; toast("Excluído."); render(); }
+    if (!confirm(`Excluir ${nomeCurto(l.nome)} e o site demo dela? O link enviado para de abrir. Se ela aparecer numa próxima busca, volta como nova.`)) return;
+    try { await sb.db(`leads?id=eq.${l.id}`, { method: "DELETE", prefer: "return=minimal" }); st.leads = st.leads.filter((x) => x.id !== l.id); st.sel.delete(l.id); st.aberto = null; toast("Excluído."); render(); }
     catch (e) { toast(e.message, true); }
   }
 });

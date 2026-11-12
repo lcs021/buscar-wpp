@@ -121,3 +121,14 @@ dl.info{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin:0 0 14p
 .plano-ed{border:1px solid var(--linha2);border-radius:var(--r);padding:12px 14px 14px;margin:12px 0 0}.plano-ed legend{color:var(--t2);font-size:12px;padding:0 6px}
 .chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--t2)}.chk input{accent-color:var(--v)}
 .bloco.prop{border:1px solid var(--linha2);border-radius:var(--r);padding:12px 14px}
+
+/* seleção e ações em massa */
+th.ck,td.ck{width:44px;padding-right:0;cursor:pointer}
+.ck input{width:18px;height:18px;cursor:pointer;accent-color:var(--vm,#c0392b)}
+tr.marcada td{background:color-mix(in srgb,var(--vm,#c0392b) 7%,transparent)}
+.massa{position:sticky;top:8px;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border:1px solid var(--linha);border-radius:var(--r);background:var(--card);box-shadow:0 10px 24px -16px rgba(0,0,0,.35)}
+.massa .esp{flex:1}
+.btn.perigo.cheio{background:var(--vm,#c0392b);border-color:var(--vm,#c0392b);color:#fff}
+.btn.perigo.cheio:hover{filter:brightness(1.08);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+@media (max-width:640px){.massa{top:4px}.massa .btn{flex:1 1 auto}}
