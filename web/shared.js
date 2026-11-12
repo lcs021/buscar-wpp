@@ -131,7 +131,6 @@ export const linkDemo = (slug) => new URL(`demo.html?s=${encodeURIComponent(slug
 // ------------------------------------------------------------------ mensagem
 export function mensagem(l, perfil = {}, link = "") {
   const nome = perfil.nome_vendedor?.trim() || "[SEU NOME]";
-  const cidade = perfil.cidade_padrao?.trim() || l.cidade || "";
   const emp = nomeCurto(l.nome);
   const prova = l.nota && l.avaliacoes ? `, nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações,` : "";
   const gancho = {
@@ -147,7 +146,7 @@ export function mensagem(l, perfil = {}, link = "") {
     link_agregador: " O pedido/agendamento continua do jeito que vocês já usam; é só uma vitrine para quem pesquisa no Google.",
     whatsapp: " O atendimento continua no WhatsApp; o site só ajuda quem pesquisa no Google a chegar até vocês.",
   }[l.status_site] || "";
-  return `Olá, tudo bem? Aqui é o ${nome}${cidade ? `, de ${cidade}` : ""}. Encontrei ${emp} no Google Maps${prova} ${gancho}`
+  return `Olá, tudo bem? Aqui é o ${nome}. Encontrei ${emp} no Google Maps${prova} ${gancho}`
     + ` Montei um modelo de site só para vocês verem como ficaria, com as informações que já estão no Google:\n\n${link || "[link do site demo]"}\n\n`
     + `É só uma demonstração, sem compromisso.${extra} Faz sentido para vocês?`;
 }
@@ -316,9 +315,9 @@ const planosAtivos = (perfil) => (perfil.planos || []).filter((x) => x && x.nome
 
 export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
   const eu = perfil.nome_vendedor?.trim() || "[SEU NOME]";
-  const cidade = perfil.cidade_padrao?.trim() || l.cidade || "";
+  const cidade = l.cidade || "";                     // cidade da empresa (nunca a sua)
   const emp = nomeCurto(l.nome);
-  const oi = `${saudacao()}! Aqui é o ${eu}${cidade ? `, de ${cidade}` : ""}.`;
+  const oi = `${saudacao()}! Aqui é o ${eu}.`;
   const prova = l.nota && l.avaliacoes ? `nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações` : "";
   const lk = link || "[link do site demo]";
   switch (estilo) {
