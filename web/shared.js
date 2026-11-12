@@ -123,6 +123,9 @@ export function iniciais(nome) {
 }
 // "Legendários Barbearia | Barbearia em Nova Iguaçu" -> "Legendários Barbearia"
 export const nomeCurto = (n) => String(n || "").split(/\s[|•·]\s/)[0].trim();
+// Link que vai na mensagem: o site próprio do lead (leads.site_demo), ou o site cinematográfico gerado na hora.
+export const linkSite = (l) => (l && l.site_demo) || new URL(`site.html?s=${encodeURIComponent(l.slug)}`, location.href.replace(/[#?].*$/, "")).href;
+// Demo antigo: continua no ar para os links que já foram enviados.
 export const linkDemo = (slug) => new URL(`demo.html?s=${encodeURIComponent(slug)}`, location.href.replace(/[#?].*$/, "")).href;
 
 // ------------------------------------------------------------------ mensagem
@@ -151,6 +154,7 @@ export function mensagem(l, perfil = {}, link = "") {
 
 // ------------------------------------------------------------------ site demo (layouts por nicho em demo-render.js)
 export { renderDemo } from "./demo-render.js";
+export { renderSite } from "./site-render.js";
 
 // ------------------------------------------------------------------ cadastro sem Google (manual / planilha)
 const NICHOS_RE = [

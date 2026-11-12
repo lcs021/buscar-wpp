@@ -68,6 +68,15 @@ Sem ela o sistema funciona do mesmo jeito: você usa **Adicionar empresas** (cad
 
 ---
 
+## Site cinematográfico por empresa (padrão Site de 10K)
+
+Cada lead agora abre em `site.html?s=<slug>`: a abertura fica presa na tela e avança com a rolagem (três fotos, três legendas e o quadro final com a nota do Google e o botão), e a página assenta no site por ramo logo abaixo. Funciona no celular e no computador, sem vídeo. Continua com a faixa de demonstração, `noindex`, fotos marcadas como ilustrativas e nenhum preço.
+
+- **Leads novos**: não precisa fazer nada. O link da mensagem já aponta para o site novo.
+- **Links antigos** (`demo.html?s=...`) continuam abrindo o demo anterior.
+- **Endereço próprio por empresa**: rode `supabase/migrations/20261112000000_site_demo.sql` no SQL Editor. Ele cria `leads.site_demo`. Quando esse campo está preenchido, é ele que vai na mensagem do WhatsApp.
+- **Arquivo publicado por empresa** (o link ganha título e descrição na prévia do WhatsApp): `node tools/gerar-sites.mjs leads.json` cria `web/s/<slug>/index.html` e o arquivo `tools/site_demo.sql` com os `update` que preenchem `leads.site_demo`.
+
 ## Por que o envio não é 100% automático
 
 O WhatsApp proíbe mensagens automáticas para quem nunca falou com você. Isso vale também para a API oficial, que exige que a pessoa tenha aceitado receber mensagens. Robôs não oficiais (que "clonam" o WhatsApp Web) costumam ter o número **banido** depois de poucas dezenas de mensagens frias. Por isso o sistema faz o máximo sem correr esse risco: escolhe a empresa, escreve o texto, cria e publica o site e abre a conversa pronta. Para você sobra só apertar enviar.

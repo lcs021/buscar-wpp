@@ -3,3 +3,4 @@ node_modules/
 supabase/.temp/
 supabase/.branches/
 .env
+tools/site_demo.sql

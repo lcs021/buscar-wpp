@@ -611,9 +611,9 @@ function rodape(x, l, links) {
 }
 
 // ---------------------------------------------------------------- montagem
-function montar(x, l) {
+function montar(x, l, heroFn) {
   const r = x.r;
-  const hero = { letreiro: heroLetreiro, os: heroOS, agenda: heroAgenda, vitrine: heroVitrine }[r.hero](x, l);
+  const hero = (heroFn || { letreiro: heroLetreiro, os: heroOS, agenda: heroAgenda, vitrine: heroVitrine }[r.hero])(x, l);
   const S = {
     prova: () => secProva(x, l),
     servicos: () => secServicos(x),
@@ -940,3 +940,6 @@ ${montar(x, l)}
 <script>${SCRIPT}</script>
 </body></html>`;
 }
+
+// peças internas reaproveitadas pelo site cinematográfico (site-render.js)
+export const _pecas = { dados, img, foto, botao, estrelas, montar, css, SCRIPT, jsonLD };

@@ -1,5 +1,5 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkDemo, mensagem, renderDemo, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
 
 const $app = document.getElementById("app");
@@ -41,7 +41,7 @@ const quando = (iso) => {
   if (s < 86400) return `há ${Math.floor(s / 3600)} h`; return new Date(iso).toLocaleDateString("pt-BR");
 };
 const leadPorId = (id) => st.leads.find((l) => l.id === id);
-const msgAuto = (l) => mensagemEstilo(st.estilo[l.id] || "padrao", l, st.perfil, linkDemo(l.slug));
+const msgAuto = (l) => mensagemEstilo(st.estilo[l.id] || "padrao", l, st.perfil, linkSite(l));
 const msgDe = (l) => l.mensagem ?? msgAuto(l);
 function chipsEstilo(l, alvo, tipos) {
   const atual = st.estilo[l.id] || (l.mensagem != null ? "" : "padrao");
@@ -83,7 +83,7 @@ async function atualizar(id, dados, msg) {
 function enviarWhats(l, texto) {
   window.open(linkWhats(l, texto), "_blank", "noopener");
   const dados = { status: "enviado", enviado_em: new Date().toISOString(), demo_publicada: true };
-  if (texto !== mensagemEstilo("padrao", l, st.perfil, linkDemo(l.slug))) dados.mensagem = texto;
+  if (texto !== mensagemEstilo("padrao", l, st.perfil, linkSite(l))) dados.mensagem = texto;
   return atualizar(l.id, dados, "Marcado como enviado. Confira o envio no WhatsApp.");
 }
 
@@ -154,7 +154,7 @@ function render() {
 function montarPreviews() {
   document.querySelectorAll("iframe[data-prev]").forEach((f) => {
     const l = leadPorId(f.dataset.prev) || st.busca?.leads.find((x) => x.id === f.dataset.prev);
-    if (l) f.srcdoc = renderDemo(l, { preview: true });
+    if (l) f.srcdoc = renderSite(l, { preview: true });
   });
 }
 
@@ -327,7 +327,7 @@ function telaGaveta() {
   const l = leadPorId(st.aberto) || st.busca?.leads.find((x) => x.id === st.aberto);
   if (!l) return "";
   const num = numeroWhats(l);
-  const link = linkDemo(l.slug);
+  const link = linkSite(l);
   return `<div class="fundo" data-acao="fechar"></div><aside class="gaveta">
   <div class="cab"><div><h2>${esc(nomeCurto(l.nome))}</h2><div class="sub">${esc(l.categoria)} · <span class="estrela">★</span> ${notaBR(l.nota)} (${milhar(l.avaliacoes)}) · ${seloFalha(l)} ${seloStatus(l)}</div></div>
     <button class="btn fechar" data-acao="fechar">Fechar</button></div>
@@ -421,7 +421,7 @@ function csv(qual) {
     ["Endereço", (l) => l.endereco], ["Bairro", (l) => l.bairro], ["Cidade", (l) => l.cidade], ["Presença digital", (l) => FALHAS[l.status_site]],
     ["Link na ficha", (l) => l.site || l.instagram || l.facebook], ["Qualificada", (l) => (l.qualificado ? "Sim" : "Não")], ["Motivo", (l) => l.motivo],
     ["Status", (l) => STATUS[l.status]], ["Enviado em", (l) => (l.enviado_em ? new Date(l.enviado_em).toLocaleString("pt-BR") : "")],
-    ["Visualizações da demo", (l) => l.visualizacoes], ["Link da demo", (l) => linkDemo(l.slug)], ["Google Maps", (l) => l.maps_url], ["Observações", (l) => l.observacoes]];
+    ["Visualizações da demo", (l) => l.visualizacoes], ["Link da demo", (l) => linkSite(l)], ["Google Maps", (l) => l.maps_url], ["Observações", (l) => l.observacoes]];
   const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const txt = "﻿" + [cols.map((c) => q(c[0])).join(";"), ...L.map((l) => cols.map((c) => q(c[1](l))).join(";"))].join("\r\n");
   const a = document.createElement("a");
@@ -455,7 +455,7 @@ document.addEventListener("click", async (ev) => {
     const ld = leadPorId(el.dataset.id); const ta = document.getElementById(el.dataset.alvo);
     if (!ld || !ta) return;
     st.estilo[ld.id] = el.dataset.estilo;
-    ta.value = mensagemEstilo(el.dataset.estilo, ld, st.perfil, linkDemo(ld.slug));
+    ta.value = mensagemEstilo(el.dataset.estilo, ld, st.perfil, linkSite(ld));
     el.parentElement.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c === el));
     if (/\[VALOR\]|\[PRAZO\]/.test(ta.value)) toast("Troque [VALOR] e [PRAZO] antes de enviar.");
     return;
@@ -475,11 +475,11 @@ document.addEventListener("click", async (ev) => {
   if (a === "favorito") return atualizar(l.id, { favorito: !l.favorito });
   if (a === "copiar-link") {
     if (!l.demo_publicada) await atualizar(l.id, { demo_publicada: true });
-    navigator.clipboard?.writeText(linkDemo(l.slug)).then(() => toast("Link copiado (demo publicada)."), () => toast(linkDemo(l.slug)));
+    navigator.clipboard?.writeText(linkSite(l)).then(() => toast("Link copiado (demo publicada)."), () => toast(linkSite(l)));
     return;
   }
   if (a === "copiar-proposta" || a === "enviar-proposta") {
-    const texto = mensagemEstilo("proposta", l, st.perfil, linkDemo(l.slug));
+    const texto = mensagemEstilo("proposta", l, st.perfil, linkSite(l));
     if (a === "copiar-proposta") { navigator.clipboard?.writeText(texto).then(() => toast("Proposta copiada."), () => toast("Não deu para copiar.", true)); return; }
     window.open(linkWhats(l, texto), "_blank", "noopener");
     const dados = { demo_publicada: true };
