@@ -360,6 +360,8 @@ function telaFila() {
       <div class="linha-btns">
         <button class="btn z g" data-acao="fila-enviar" data-id="${l.id}">${I.zap} Enviar no WhatsApp e ir para a próxima</button>
         <button class="btn" data-acao="fila-pular">Pular</button>
+        <a class="btn" href="https://www.google.com/search?q=${encodeURIComponent(`"${nomeCurto(l.nome)}" ${l.cidade || ""}`)}" target="_blank" rel="noopener">Conferir no Google</a>
+        <button class="btn perigo" data-acao="tem-site" data-id="${l.id}">Já tem site</button>
         <button class="btn perigo" data-acao="fila-descartar" data-id="${l.id}">Descartar</button>
         <button class="btn" data-abrir="${l.id}">Detalhes</button>
       </div>
@@ -413,7 +415,7 @@ function telaGaveta() {
     <div class="bloco"><label>Status</label><select class="in" id="det-status" data-id="${l.id}" style="max-width:260px">${Object.entries(STATUS).map(([k, r]) => `<option value="${k}"${l.status === k ? " selected" : ""}>${r}</option>`).join("")}</select></div>
     <div class="bloco"><label>Observações</label><textarea class="in" id="det-obs" data-dono="${l.id}" rows="4" placeholder="Ex.: falei com o dono, pediu orçamento, retornar sexta…">${esc(l.observacoes)}</textarea>
       <div class="linha-btns" style="margin-top:8px"><button class="btn" data-acao="salvar-obs" data-id="${l.id}">Salvar observação</button>
-      <span class="esp" style="flex:1"></span><button class="btn perigo" data-acao="excluir" data-id="${l.id}">Excluir lead</button></div></div>
+      <span class="esp" style="flex:1"></span><button class="btn perigo" data-acao="tem-site" data-id="${l.id}">Já tem site</button><button class="btn perigo" data-acao="excluir" data-id="${l.id}">Excluir lead</button></div></div>
   </div>
   <div class="celular"><iframe data-prev="${l.id}" title="Pré-visualização do site demo"></iframe></div></div>
   </aside>`;
@@ -525,6 +527,7 @@ document.addEventListener("click", async (ev) => {
   if (!l) return;
   if (a === "fila-enviar") { await enviarWhats(l, document.getElementById("fila-msg").value); return; }
   if (a === "fila-descartar") return atualizar(l.id, { status: "descartado" }, "Descartado.");
+  if (a === "tem-site") return atualizar(l.id, { status_site: "com_site", qualificado: false, status: "descartado", demo_publicada: false, motivo: "Fora do filtro: já tem site próprio (marcado por você)." }, "Marcada como 'já tem site' e tirada da fila.");
   if (a === "enviar") return enviarWhats(l, document.getElementById("det-msg").value);
   if (a === "publicar") return atualizar(l.id, { demo_publicada: !l.demo_publicada }, l.demo_publicada ? "Demo fora do ar." : "Demo publicada.");
   if (a === "favorito") return atualizar(l.id, { favorito: !l.favorito });

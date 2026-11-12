@@ -148,7 +148,7 @@ export function mensagem(l, perfil = {}, link = "") {
   }[l.status_site] || "";
   return `Olá, tudo bem? Aqui é o ${nome}. Encontrei ${emp} no Google Maps${prova} ${gancho}`
     + ` Montei um modelo de site só para vocês verem como ficaria, com as informações que já estão no Google:\n\n${link || "[link do site demo]"}\n\n`
-    + `É só uma demonstração, sem compromisso.${extra} Faz sentido para vocês?`;
+    + `É só uma demonstração, sem compromisso.${extra} Faz sentido para vocês?\n\n_(Se vocês já tiverem um site e eu não encontrei, me desculpa e pode desconsiderar.)_`;
 }
 
 // ------------------------------------------------------------------ site demo (layouts por nicho em demo-render.js)
@@ -322,13 +322,13 @@ export function mensagemEstilo(estilo, l, perfil = {}, link = "") {
   const lk = link || "[link do site demo]";
   switch (estilo) {
     case "curta":
-      return `${oi} Vi ${emp} no Google e reparei que ${gancho(l)}. Fiz um modelo de site para vocês verem como ficaria:\n\n${lk}\n\nSem compromisso. O que acharam?`;
+      return `${oi} Vi ${emp} no Google e reparei que ${gancho(l)}. Fiz um modelo de site para vocês verem como ficaria:\n\n${lk}\n\nSem compromisso. O que acharam?\n\n_(Se vocês já tiverem um site e eu não encontrei, me desculpa e pode desconsiderar.)_`;
     case "elogio":
-      return `${oi} ${prova ? `Parabéns pelo trabalho: ${prova} no Google não é pra qualquer um!` : `Parabéns pelo trabalho de vocês!`} Só reparei que ${gancho(l)}, e muita gente que pesquisa acaba indo pra concorrência por isso.\n\nMontei um modelo de site com a cara de ${emp}, só pra mostrar como ficaria:\n\n${lk}\n\nÉ só uma demonstração, sem compromisso. Faz sentido pra vocês?`;
+      return `${oi} ${prova ? `Parabéns pelo trabalho: ${prova} no Google não é pra qualquer um!` : `Parabéns pelo trabalho de vocês!`} Só reparei que ${gancho(l)}, e muita gente que pesquisa acaba indo pra concorrência por isso.\n\nMontei um modelo de site com a cara de ${emp}, só pra mostrar como ficaria:\n\n${lk}\n\nÉ só uma demonstração, sem compromisso. Faz sentido pra vocês?\n\n_(Se vocês já tiverem um site e eu não encontrei, me desculpa e pode desconsiderar.)_`;
     case "pergunta":
-      return `${oi} Vi ${emp} no Google Maps${prova ? ` (${prova})` : ""} e reparei que ${gancho(l)}.\n\nMontei um modelo de site com o nome e as informações de vocês, só pra mostrar como ficaria. Posso te mandar o link pra você dar uma olhada? Sem compromisso.`;
+      return `${oi} Vi ${emp} no Google Maps${prova ? ` (${prova})` : ""} e reparei que ${gancho(l)}.\n\nMontei um modelo de site com o nome e as informações de vocês, só pra mostrar como ficaria. Posso te mandar o link pra você dar uma olhada? Sem compromisso.\n\n_(Se vocês já tiverem um site e eu não encontrei, me desculpa e pode desconsiderar.)_`;
     case "ganho":
-      return `${oi} Quando alguém pesquisa "${(TEMAS[l.nicho]?.rotulo || "comércio").toLowerCase()} em ${l.bairro || cidade || "sua região"}" no Google, quem tem site passa mais confiança e recebe mais contato. Vi que ${gancho(l)}${prova ? `, mesmo com ${prova}` : ""}.\n\nPor isso montei um modelo de site para ${emp}, com botão direto pro WhatsApp e mapa:\n\n${lk}\n\nDá uma olhada no celular, sem compromisso. Se curtir, deixo pronto rapidinho.`;
+      return `${oi} Quando alguém pesquisa "${(TEMAS[l.nicho]?.rotulo || "comércio").toLowerCase()} em ${l.bairro || cidade || "sua região"}" no Google, quem tem site passa mais confiança e recebe mais contato. Vi que ${gancho(l)}${prova ? `, mesmo com ${prova}` : ""}.\n\nPor isso montei um modelo de site para ${emp}, com botão direto pro WhatsApp e mapa:\n\n${lk}\n\nDá uma olhada no celular, sem compromisso. Se curtir, deixo pronto rapidinho.\n\n_(Se vocês já tiverem um site e eu não encontrei, me desculpa e pode desconsiderar.)_`;
     case "seguimento":
       return `${oi} Passando só pra saber se você conseguiu ver o modelo de site que montei para ${emp}:\n\n${lk}\n\nSe quiser, ajusto cores, fotos e serviços do jeito de vocês. Posso te explicar como funciona?`;
     case "abriu":
