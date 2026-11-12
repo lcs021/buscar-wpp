@@ -126,9 +126,11 @@ const SCRIPT_CINE = `
 })();`;
 
 // Conta a visualização no painel quando a página é um arquivo publicado (o site.html já conta ao buscar os dados).
+// Se o lead foi excluído ou o site foi tirado do ar no painel, o arquivo publicado também deixa de mostrar o site.
 const contador = (slug, sb) => `
-(function(){try{if(/[?&]p(=|&|$)/.test(location.search))return;
-  fetch(${JSON.stringify(sb.url.replace(/\/+$/, "") + "/rest/v1/rpc/demo_publica")},{method:'POST',headers:{apikey:${JSON.stringify(sb.chave)},'Content-Type':'application/json'},body:JSON.stringify({p_slug:${JSON.stringify(slug)},p_contar:true})}).catch(function(){})
+(function(){try{var prev=/[?&]p(=|&|$)/.test(location.search);
+  fetch(${JSON.stringify(sb.url.replace(/\/+$/, "") + "/rest/v1/rpc/demo_publica")},{method:'POST',headers:{apikey:${JSON.stringify(sb.chave)},'Content-Type':'application/json'},body:JSON.stringify({p_slug:${JSON.stringify(slug)},p_contar:!prev})})
+  .then(function(r){return r.ok?r.json():undefined}).then(function(d){if(d===null&&!prev){document.title='Site indisponível';document.body.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font:17px/1.5 system-ui,sans-serif;text-align:center;color:#333;background:#f5f5f3"><div><h1 style="font-size:24px;margin:0 0 8px">Este site não está mais disponível</h1><p style="margin:0">O link de demonstração foi desativado.</p></div></main>';}}).catch(function(){})
 }catch(e){}})();`;
 
 // renderSite(lead)                       -> página gerada na hora (site.html?s=<slug> e pré-visualização do painel)
