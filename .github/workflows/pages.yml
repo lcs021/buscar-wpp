@@ -20,6 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Cada publicação ganha uma versão nos arquivos: o navegador baixa o código novo na hora em vez de usar o guardado.
+      - name: Versionar arquivos (evita cache antigo)
+        run: |
+          V=${GITHUB_SHA::8}
+          find web -maxdepth 1 \( -name '*.js' -o -name '*.html' \) -print0 | xargs -0 sed -i -E \
+            -e "s#(from |import\()([\"'])\./([a-z0-9-]+\.js)\2#\1\2./\3?v=$V\2#g" \
+            -e "s#(src|href)=\"(app\.js|app\.css)\"#\1=\"\2?v=$V\"#g"
+          grep -c "?v=$V" web/index.html web/app.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
