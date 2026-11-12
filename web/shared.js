@@ -200,6 +200,7 @@ export function qualificarLocal(l, perfil = {}) {
   const min = Number(perfil.nota_minima ?? 4.5), minAv = Number(perfil.avaliacoes_minimas ?? 20);
   const m = [];
   if (l.status_site === "com_site") m.push("já tem site próprio");
+  if (l.status_site === "link_agregador") m.push("a ficha já leva para uma página de pedido/agenda (o dono costuma chamar de site)");
   if (l.nota != null && l.nota < min) m.push(`nota ${notaBR(l.nota)} abaixo de ${notaBR(min)}`);
   if (l.avaliacoes != null && l.avaliacoes < minAv) m.push(`${l.avaliacoes} avaliações (mínimo ${minAv})`);
   if (!l.telefone && !l.whatsapp) m.push("sem telefone");

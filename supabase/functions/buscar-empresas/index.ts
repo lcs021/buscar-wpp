@@ -98,6 +98,7 @@ export function qualificar(e: { status_site: string; nota: number | null; avalia
   c: Criterios): { qualificado: boolean; motivo: string } {
   const motivos: string[] = [];
   if (e.status_site === "com_site") motivos.push("já tem site próprio");
+  if (e.status_site === "link_agregador") motivos.push("a ficha já leva para uma página de pedido/agenda (o dono costuma chamar de site)");
   if ((e.nota ?? 0) < c.nota_minima) motivos.push(`nota ${e.nota ?? "sem nota"} abaixo de ${c.nota_minima}`);
   if ((e.avaliacoes ?? 0) < c.avaliacoes_minimas) motivos.push(`${e.avaliacoes ?? 0} avaliações (mínimo ${c.avaliacoes_minimas})`);
   if (!e.telefone && !e.whatsapp) motivos.push("sem telefone na ficha");
