@@ -119,87 +119,223 @@ const FOTOS = {
  "barbearia": [
   "photo-1599351431202-1e0f0137899a",
   "photo-1621645582931-d1d3e6564943",
-  "photo-1605497788044-5a32c7078486"
+  "photo-1605497788044-5a32c7078486",
+  "photo-1759134198561-e2041049419c",
+  "photo-1627238772768-e3d0ccb1adb0",
+  "photo-1627238772728-e2f860b58949",
+  "photo-1775494165568-42c0fbb4c782",
+  "photo-1792523297859-6b92444b583c",
+  "photo-1503951914875-452162b0f3f1"
  ],
  "hamburgueria": [
   "photo-1607013251379-e6eecfffe234",
   "photo-1550547660-d9450f859349",
-  "photo-1606755962773-d324e0a13086"
+  "photo-1606755962773-d324e0a13086",
+  "photo-1667329829058-ac191ba4a905",
+  "photo-1648775170273-dcbe48fb12a0",
+  "photo-1466978913421-dad2ebd01d17",
+  "photo-1644447381290-85358ae625cb",
+  "photo-1776829399747-9c77bdc60ab7"
  ],
  "pizzaria": [
   "photo-1565299624946-b28f40a0ae38",
   "photo-1593504049359-74330189a345",
-  "photo-1613564834361-9436948817d1"
+  "photo-1613564834361-9436948817d1",
+  "photo-1716237388463-14fdbfc0ca5e",
+  "photo-1700760934249-93efbb574d23",
+  "photo-1767713362918-d6db856570ba",
+  "photo-1644917777632-04f68ce502dd",
+  "photo-1716237389072-354bcb7ab6d0"
  ],
  "acai": [
   "photo-1627308594190-a057cd4bfac8",
   "photo-1684403620650-81dc661a69db",
-  "photo-1709139068234-f83a548f3bec"
+  "photo-1709139068234-f83a548f3bec",
+  "photo-1771371000586-33abd2ce9e23",
+  "photo-1684403731883-67a71a793d2d",
+  "photo-1672959202028-51e3b71255bd",
+  "photo-1777113310717-1047d523f2ad"
  ],
  "padaria": [
   "photo-1515823662972-da6a2e4d3002",
   "photo-1635341814289-55cf1490024c",
-  "photo-1534620808146-d33bb39128b2"
+  "photo-1534620808146-d33bb39128b2",
+  "photo-1568254183919-78a4f43a2877",
+  "photo-1583338917451-face2751d8d5",
+  "photo-1546237769-6f84ec1a512a",
+  "photo-1644015272264-2d70518c2046",
+  "photo-1775637659246-a508a5baa4eb",
+  "photo-1783408355814-351ffec4a6ab"
  ],
  "restaurante": [
   "photo-1467003909585-2f8a72700288",
   "photo-1550367363-ea12860cc124",
-  "photo-1652690772450-2cc9c53060f5"
+  "photo-1652690772450-2cc9c53060f5",
+  "photo-1517248135467-4c7edcad34c4",
+  "photo-1559339352-11d035aa65de",
+  "photo-1783447036642-90a65ff85a0f",
+  "photo-1538334421852-687c439c92f4",
+  "photo-1776763255189-3c8237aec808"
  ],
  "oficina": [
   "photo-1615906655593-ad0386982a0f",
   "photo-1637640125496-31852f042a60",
-  "photo-1727893332539-95e491ba4d90"
+  "photo-1727893332539-95e491ba4d90",
+  "photo-1786198984387-b63cdf520602",
+  "photo-1487754180451-c456f719a1fc",
+  "photo-1767681092416-bccf9410bda4",
+  "photo-1727893119356-1702fe921cf9",
+  "photo-1771340742493-52fbd5476ccb"
  ],
  "estetica_auto": [
   "photo-1633014041037-f5446fb4ce99",
   "photo-1708805282706-f44730b7e527",
-  "photo-1605437241278-c1806d14a4d9"
+  "photo-1605437241278-c1806d14a4d9",
+  "photo-1520340356584-f9917d1eea6f",
+  "photo-1762933868999-a7adb3f60287",
+  "photo-1608506375591-b90e1f955e4b",
+  "photo-1732357624591-f2137085659b",
+  "photo-1704796141009-5ed5cc8ca5f3",
+  "photo-1611239179213-d972da54091a"
  ],
  "salao": [
   "photo-1774660810725-fb04e002003d",
   "photo-1781450090585-1a511b7066d9",
-  "photo-1560869713-7d0a29430803"
+  "photo-1560869713-7d0a29430803",
+  "photo-1634449571010-02389ed0f9b0",
+  "photo-1761839256791-6a93f89fb8b0",
+  "photo-1521590832167-7bcbfaa6381f",
+  "photo-1522337360788-8b13dee7a37e",
+  "photo-1580618672591-eb180b1a973f",
+  "photo-1792735207154-5af8a6e4d1a9"
  ],
  "manicure": [
   "photo-1610992015762-45dca7fa3a85",
   "photo-1604902396830-aca29e19b067",
-  "photo-1690749138086-7422f71dc159"
+  "photo-1690749138086-7422f71dc159",
+  "photo-1632345031435-8727f6897d53",
+  "photo-1777287216954-2b4b22bb6bf2",
+  "photo-1769687209448-025548dfca8b",
+  "photo-1571290274554-6a2eaa771e5f",
+  "photo-1604654894610-df63bc536371"
  ],
  "dentista": [
   "photo-1588776814546-daab30f310ce",
   "photo-1762625570087-6d98fca29531",
-  "photo-1606811856475-5e6fcdc6e509"
+  "photo-1606811856475-5e6fcdc6e509",
+  "photo-1629909613654-28e377c37b09",
+  "photo-1606811971618-4486d14f3f99",
+  "photo-1598256989800-fe5f95da9787",
+  "photo-1564420228450-d9a5bc8d6565",
+  "photo-1771442873038-dda05b6ca447"
  ],
  "clinica": [
   "photo-1762625570087-6d98fca29531",
   "photo-1731514693674-a32211b63996",
-  "photo-1731514721772-329626f84c8b"
+  "photo-1731514721772-329626f84c8b",
+  "photo-1576091160550-2173dba999ef",
+  "photo-1758691462863-9e1b8a863140",
+  "photo-1758691462878-6edc3d3da1be",
+  "photo-1758691462954-e6fa5005474b"
  ],
  "pet": [
   "photo-1588943211346-0908a1fb0b01",
   "photo-1537151608828-ea2b11777ee8",
-  "photo-1616032776175-77c09e280ad8"
+  "photo-1616032776175-77c09e280ad8",
+  "photo-1561037404-61cd46aa615b",
+  "photo-1782022491533-267c13b410bf",
+  "photo-1560807707-8cc77767d783",
+  "photo-1776880952098-1cc6dbbda513",
+  "photo-1760596687383-887f0eeae71b",
+  "photo-1588269845464-8993565cac3a"
  ],
  "loja": [
   "photo-1532453288672-3a27e9be9efd",
   "photo-1767968037382-8eb9c564339f",
-  "photo-1603400521630-9f2de124b33b"
+  "photo-1603400521630-9f2de124b33b",
+  "photo-1441986300917-64674bd600d8",
+  "photo-1555529771-122e5d9f2341",
+  "photo-1595991209266-5ff5a3a2f008",
+  "photo-1441984904996-e0b6ba687e04",
+  "photo-1769107805465-bfd41863f1a0"
  ],
  "academia": [
   "photo-1637430308606-86576d8fef3c",
   "photo-1620188467120-5042ed1eb5da",
-  "photo-1771270786606-f5a0e57db762"
+  "photo-1771270786606-f5a0e57db762",
+  "photo-1689877020200-403d8542d95d",
+  "photo-1757924284732-4189190321cf",
+  "photo-1671970922029-0430d2ae122c",
+  "photo-1662386392891-688364c5a5d7",
+  "photo-1765728617805-b9f22d64e5b3"
  ],
  "generico": [
   "photo-1610839123817-236de748e5c9",
   "photo-1595245761073-0eb3ca3f179c",
-  "photo-1622915753421-5856600e44a5"
+  "photo-1622915753421-5856600e44a5",
+  "photo-1542715473-63675d7974bd",
+  "photo-1687422808311-a776f467a468",
+  "photo-1753351052363-53ce102830eb",
+  "photo-1656443046114-08c6dac52aa2",
+  "photo-1472851294608-062f824d29cc"
  ]
 };
 const foto = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=72`;
 // largura média de cada letra no título (em), para o nome caber sem quebrar no meio da palavra
 const FATOR = {"barbearia": 0.47, "hamburgueria": 0.86, "pizzaria": 0.62, "acai": 0.62, "padaria": 0.64, "restaurante": 0.6, "oficina": 0.56, "estetica_auto": 0.56, "salao": 0.57, "manicure": 0.57, "dentista": 0.68, "clinica": 0.68, "pet": 0.6, "loja": 0.56, "academia": 0.62, "generico": 0.68};
+
+// ---------------------------------------------------------------- variações (cada empresa sai única)
+// A escolha é fixa por empresa (hash do nome): o mesmo lead sempre abre igual, mas dois do mesmo ramo saem diferentes.
+const P = (papel, tinta, marca, marcaTxt, acento, suave) => ({ papel, tinta, marca, marcaTxt, acento, suave });
+const VARIANTES = {
+  barbearia:     [P("#ECE9E2", "#15191F", "#1E2B40", "#F1ECE2", "#C9A25F", "#5E636B"), P("#EEEBE3", "#161A16", "#1F3B2D", "#F0EBDD", "#D4A84B", "#5F665E")],
+  hamburgueria:  [P("#F4EEE4", "#1A1714", "#1A1714", "#F7EBD7", "#F26B1D", "#6A5F55"), P("#F3EBD8", "#20261E", "#2F5233", "#FAF1DC", "#F2B705", "#66624F")],
+  pizzaria:      [P("#F5EFE2", "#1F2A20", "#234A31", "#F6EEDC", "#E8A33D", "#64695A"), P("#F3ECE1", "#231C18", "#2B2420", "#F6E9D6", "#E0714A", "#6E5F55")],
+  acai:          [P("#F8F5FF", "#1E0B28", "#4B1460", "#FAF3FF", "#B5E655", "#66567A"), P("#FFF5FA", "#2A0A1F", "#7A1453", "#FFF0F7", "#FFC857", "#77566B")],
+  padaria:       [P("#F7F4EC", "#1E2A38", "#2D4A6B", "#F7F0E1", "#E3B567", "#5F6874"), P("#FBF5F1", "#3B2420", "#6E3B2E", "#FCEEE4", "#EBA9A0", "#7A615B")],
+  restaurante:   [P("#F6F1EA", "#241B1C", "#5E1F2B", "#F7EDE6", "#D9A441", "#6E6060"), P("#F2F2EC", "#1B2524", "#1F4A4A", "#EEF3EF", "#E07A4F", "#5E6966")],
+  oficina:       [P("#ECEAE6", "#1E2124", "#1E2124", "#F2F1EE", "#F06A3C", "#5C6166"), P("#E9ECEF", "#1A2330", "#1A2330", "#EEF2F6", "#4FB3E8", "#586474")],
+  estetica_auto: [P("#F3F4F5", "#121417", "#121417", "#EDF0F2", "#22C3D6", "#5B6168"), P("#F4F2F1", "#1B1C20", "#2A2D35", "#F2F1EF", "#F25C54", "#5F6168")],
+  salao:         [P("#F8F7F3", "#22281F", "#3E4A3A", "#F4F1E8", "#C8A97E", "#6A7066"), P("#FAF8F5", "#1A1716", "#1A1716", "#F5EFE6", "#C9A46A", "#6B6560")],
+  manicure:      [P("#FDF8F6", "#33191E", "#9E4567", "#FFF4F7", "#F3C6C2", "#80646A"), P("#FBF7FA", "#2A1430", "#5D2A6B", "#FAF0FB", "#E7B8D9", "#77617C")],
+  dentista:      [P("#FFFFFF", "#0F2540", "#1F5FA8", "#F2F7FD", "#8CC8F0", "#4E6278"), P("#FFFFFF", "#14213D", "#14213D", "#F4F6FA", "#FFB4A2", "#55607A")],
+  clinica:       [P("#FFFFFF", "#1C2A3A", "#2F5D7C", "#F1F6FA", "#A9C9DE", "#586A7B"), P("#FFFFFF", "#2A2236", "#4B3F72", "#F4F1FA", "#C4B8E6", "#675F78")],
+  pet:           [P("#FFF9F2", "#2B2118", "#B94E14", "#FFF6EE", "#5CC8C2", "#6E6055"), P("#F5F8FF", "#18213A", "#3554B8", "#F3F6FF", "#FFC94A", "#59627A")],
+  loja:          [P("#FBF8F4", "#2A1D17", "#8A3B24", "#FBEFE6", "#D8A47F", "#74655C"), P("#FFFFFF", "#141B2D", "#141B2D", "#F1F3F8", "#C9A86B", "#5D6475")],
+  academia:      [P("#F0F1EC", "#15171A", "#15171A", "#F0F1EC", "#C6F432", "#5C6066"), P("#EFF1F5", "#141824", "#141824", "#EFF1F5", "#4D8BFF", "#5A6070")],
+  generico:      [P("#FFFFFF", "#12312F", "#12514C", "#ECF6F4", "#F2A541", "#536866"), P("#FFFFFF", "#2B1D3A", "#3F2A5C", "#F3EFF9", "#F0B44C", "#685E77")],
+};
+// frases de abertura: só tom, nenhuma promessa ou dado inventado
+const CHAMADAS = {
+  barbearia:     ["Seu corte e sua barba em boas mãos.", "Cadeira pronta e tesoura afiada. É só marcar."],
+  hamburgueria:  ["Pão macio, carne suculenta e muito sabor.", "Aquele burger que dá vontade de voltar."],
+  pizzaria:      ["Massa caprichada e recheio de verdade.", "Peça a sua e receba quentinha."],
+  acai:          ["Monte do seu jeito, com o que você mais gosta.", "Gelado, cremoso e cheio de opções."],
+  padaria:       ["Fornadas fresquinhas para o seu dia.", "Do café da manhã à encomenda de festa."],
+  restaurante:   ["Comida com tempero de casa.", "Um bom prato, pertinho de você."],
+  oficina:       ["Seu carro revisado, sem complicação.", "Conte o problema e receba seu orçamento."],
+  estetica_auto: ["Brilho e capricho em cada detalhe.", "Lavagem e cuidado para o seu carro."],
+  salao:         ["Seu momento de cuidado, do jeito que você merece.", "Corte, cor e tratamento com carinho."],
+  manicure:      ["Mãos e pés bem cuidados, do seu jeito.", "Seu momento de cuidado começa aqui."],
+  dentista:      ["Seu sorriso merece atenção de perto.", "Marque sua consulta com facilidade."],
+  clinica:       ["Cuidado com a sua saúde, perto de casa.", "Marque seu atendimento sem complicação."],
+  pet:           ["Seu pet limpinho, cheiroso e feliz.", "Banho, tosa e carinho para quem você ama."],
+  loja:          ["Novidades que combinam com você.", "Passe aqui e encontre o que procura."],
+  academia:      ["Comece hoje o seu treino.", "Treino perto de casa, no seu ritmo."],
+  generico:      ["Atendimento de qualidade, perto de você.", "Fale com a gente e tire suas dúvidas."],
+};
+function semente(l) {
+  let h = 2166136261;
+  for (const c of String(l.place_id || l.slug || l.nome || "")) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+// troca as cores da paleta base pelas da variação (inclusive dentro do padrão de fundo)
+function aplicarVariante(base, v) {
+  if (!v) return base;
+  let padrao = base.padrao;
+  for (const k of ["marca", "acento", "papel", "tinta"]) padrao = padrao.split(base[k]).join(v[k]).split(encodeURIComponent(base[k])).join(encodeURIComponent(v[k]));
+  return { ...base, ...v, padrao };
+}
 
 // Direção de arte do nicho (usada também pela página de proposta)
 export const temaVisual = (nicho) => ({ ...(D[nicho] || D.generico), fotos: (FOTOS[nicho] || FOTOS.generico).map((id) => foto(id, 1000)) });
@@ -238,8 +374,17 @@ const FORMS = {
 
 // ---------------------------------------------------------------- dados
 function dados(l) {
-  const t = TEMAS[l.nicho] || TEMAS.generico;
-  const d = D[l.nicho] || D.generico;
+  const n = D[l.nicho] ? l.nicho : "generico";
+  const h = semente(l);
+  const variante = h % 3;                         // 0 = paleta clássica do ramo, 1 e 2 = alternativas
+  const d = aplicarVariante(D[n], variante ? VARIANTES[n][variante - 1] : null);
+  const base = TEMAS[l.nicho] || TEMAS.generico;
+  const frases = [n === "generico" ? CHAMADAS.generico[0] : base.chamada, ...CHAMADAS[n]];
+  const t = { ...base, chamada: frases[Math.floor(h / 3) % 3] };
+  const todas = FOTOS[n];
+  const ini = Math.floor(h / 9) % todas.length;
+  const ids = todas.map((_, i) => todas[(ini + i) % todas.length]);
+  const espelho = Math.floor(h / 97) % 2 === 1;
   const r = RECEITAS[l.nicho] || RECEITAS.generico;
   const nome = nomeCurto(l.nome);
   const num = numeroWhats(l);
@@ -251,11 +396,10 @@ function dados(l) {
   const rua = String(l.endereco || "").split(" - ")[0];
   const lugar = [l.bairro, l.cidade].filter(Boolean).join(", ");
   const mapa = "https://maps.google.com/maps?q=" + encodeURIComponent(`${nome}, ${l.endereco || lugar}`) + "&z=16&output=embed";
-  const ids = FOTOS[l.nicho] || FOTOS.generico;
   const maior = Math.max(...nome.split(/\s+/).map((p) => p.length), 4);
   const h1 = `style="--fit:calc(100cqi / ${(maior * (FATOR[l.nicho] || .62) * 1.04).toFixed(2)})"`;
   const avaliacoes = l.maps_url || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${nome}, ${l.endereco || lugar}`);
-  return { t, d, r, nome, num, contato, temNota, rua, lugar, mapa, tel, ids, h1, avaliacoes, f: FORMS[r.form] };
+  return { t, d, r, nome, num, contato, temNota, rua, lugar, mapa, tel, ids, h1, avaliacoes, espelho, variante, f: FORMS[r.form] };
 }
 
 const estrelas = (n) => {
@@ -287,7 +431,7 @@ function cabecalho(x, links) {
 // ---------------------------------------------------------------- aberturas (hero)
 function heroLetreiro(x, l) {
   const { t } = x;
-  return `<section class="hero h-letreiro">
+  return `<section class="hero h-letreiro${x.espelho ? " espelho" : ""}">
     <div class="h-painel"><div class="h-txt">
       <p class="kicker">${esc(t.rotulo)}${x.lugar ? ` em ${esc(x.lugar)}` : ""}</p>
       <h1 ${x.h1}>${esc(x.nome)}</h1>
@@ -302,7 +446,7 @@ function heroLetreiro(x, l) {
 function heroOS(x, l) {
   const { t } = x;
   const itens = t.servicos.map(([s, desc]) => `<li><span class="caixa" aria-hidden="true">${svg("check", 13, 2.6)}</span><div><b>${esc(s)}</b><span>${esc(desc)}</span></div><a class="os-sel" href="#contato" data-servico="${esc(s)}" aria-label="Pedir orçamento de ${esc(s)}">Orçar</a></li>`).join("");
-  return `<section class="hero h-os">
+  return `<section class="hero h-os${x.espelho ? " espelho" : ""}">
     <div class="h-txt">
       <p class="kicker">${esc(t.rotulo)}${x.lugar ? ` em ${esc(x.lugar)}` : ""}</p>
       <h1 ${x.h1}>${esc(x.nome)}</h1>
@@ -320,7 +464,7 @@ function heroOS(x, l) {
 
 function heroAgenda(x, l) {
   const { t } = x;
-  return `<section class="hero h-agenda">
+  return `<section class="hero h-agenda${x.espelho ? " espelho" : ""}">
     <div class="h-txt">
       <p class="kicker">${esc(t.rotulo)}${x.lugar ? ` em ${esc(x.lugar)}` : ""}</p>
       <h1 ${x.h1}>${esc(x.nome)}</h1>
@@ -341,7 +485,7 @@ function heroAgenda(x, l) {
 
 function heroVitrine(x, l) {
   const { t } = x;
-  return `<section class="hero h-vitrine">
+  return `<section class="hero h-vitrine${x.espelho ? " espelho" : ""}">
     <figure class="h-foto">${img(x.ids[0], `${t.rotulo} (foto ilustrativa)`, { larg: 1600, sizes: "100vw", prioridade: true, w: 1600, h: 1000 })}${fotoTag}</figure>
     <div class="h-txt">
       <p class="kicker">${esc(t.rotulo)}${x.lugar ? ` em ${esc(x.lugar)}` : ""}</p>
@@ -387,7 +531,7 @@ function secGaleria(x) {
   const ids = [x.ids[1], x.ids[2], x.ids[0]];
   return `<section class="sec galeria" id="fotos"><div class="sec-in rev">
     <h2>${esc(x.r.tGal)}</h2>
-    <div class="fotos">${ids.map((id, i) => `<button class="foto f${i + 1}" type="button" data-amplia="${foto(id, 1600)}" aria-label="Ampliar foto: ${esc(rot[i])}">${img(id, `${rot[i]} (foto ilustrativa)`, { larg: i ? 700 : 1100, sizes: i ? "(max-width: 860px) 50vw, 25vw" : "(max-width: 860px) 100vw, 50vw" })}</button>`).join("")}</div>
+    <div class="fotos${x.espelho ? "" : " inv"}">${ids.map((id, i) => `<button class="foto f${i + 1}" type="button" data-amplia="${foto(id, 1600)}" aria-label="Ampliar foto: ${esc(rot[i])}">${img(id, `${rot[i]} (foto ilustrativa)`, { larg: i ? 700 : 1100, sizes: i ? "(max-width: 860px) 50vw, 25vw" : "(max-width: 860px) 100vw, 50vw" })}</button>`).join("")}</div>
     <p class="nota-serv">Fotos ilustrativas. Na versão final entram as fotos reais de ${esc(x.nome)}.</p>
   </div></section>`;
 }
@@ -692,6 +836,26 @@ h1{overflow-wrap:break-word;word-break:normal;hyphens:manual;font-size:min(var(-
 }
 @keyframes entra{from{opacity:0;transform:translateY(16px)}}
 @keyframes revela{from{transform:scale(1.06)}}
+
+/* composição espelhada (varia por empresa; só no computador, no celular tudo empilha igual) */
+@media (min-width:861px){
+  .h-letreiro.espelho{grid-template-columns:.95fr 1.05fr}
+  .h-letreiro.espelho .h-foto{order:-1}
+  .h-letreiro.espelho .h-painel{justify-content:flex-start}
+  .h-letreiro.espelho .h-txt{padding:64px 20px 64px 48px}
+  .h-letreiro.espelho .selo{left:auto;right:24px}
+  .h-os.espelho .h-txt,.h-os.espelho .os{grid-column:2}
+  .h-os.espelho .h-foto{grid-column:1}
+  .h-agenda.espelho{grid-template-columns:.9fr 1.1fr}
+  .h-agenda.espelho .h-lado{order:-1}
+  .h-agenda.espelho .cartao{left:36px;right:-36px}
+  .h-vitrine.espelho{align-items:center}
+  .h-vitrine.espelho .h-foto::after{background:linear-gradient(90deg,rgba(0,0,0,.78) 0%,rgba(0,0,0,.5) 45%,rgba(0,0,0,.08) 80%)}
+  .h-vitrine.espelho .h-txt{padding:96px 20px}
+  .fotos.inv{grid-template-columns:1fr 2fr}
+  .fotos.inv .f1{grid-column:2;grid-row:1 / span 2}
+  .fotos.inv .f2,.fotos.inv .f3{grid-column:1}
+}
 
 /* celular e tablet */
 @media (max-width:980px){
