@@ -35,6 +35,7 @@ Deno.test("both renderers always mark pages as unofficial and noindex", () => {
   for (const html of [renderDemo(fixture()), renderSite(fixture()), renderSite(fixture(), { preview: true })]) {
     includes(html, '<meta name="robots" content="noindex,nofollow">');
     includes(html, "Não é o site oficial.");
+    includes(html, "Textos promocionais e serviços são exemplos; confirme os dados antes de usar.");
   }
 });
 

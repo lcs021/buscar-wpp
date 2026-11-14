@@ -159,7 +159,7 @@ export function renderSite(l, { preview = false, url = "", supabase = null } = {
 <style>${css(x)}${CSS_CINE}</style>
 <script type="application/ld+json">${jsonLD(x, l)}</script></head>
 <body class="seg-${esc(l.nicho || "generico")} cinema">
-<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial.${preview ? " (pré-visualização)" : ""}</div>
+<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial. Textos promocionais e serviços são exemplos; confirme os dados antes de usar.${preview ? " (pré-visualização)" : ""}</div>
 ${montar(x, l, heroCinema)}
 <script>${SCRIPT()}${SCRIPT_CINE}${supabase && l.slug ? contador(l.slug, supabase) : ""}</script>
 </body></html>`;

@@ -938,7 +938,7 @@ export function renderDemo(l, { preview = false } = {}) {
 <style>${css(x)}</style>
 <script type="application/ld+json">${jsonLD(x, l)}</script></head>
 <body class="seg-${esc(l.nicho || "generico")}">
-<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial.${preview ? " (pré-visualização)" : ""}</div>
+<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial. Textos promocionais e serviços são exemplos; confirme os dados antes de usar.${preview ? " (pré-visualização)" : ""}</div>
 ${montar(x, l)}
 <script>${SCRIPT}</script>
 </body></html>`;
