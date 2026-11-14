@@ -3,6 +3,7 @@ import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkM
 import { PLANOS_PADRAO, reais } from "./planos.js";
 import { csvCell } from "./csv.js";
 import { sanitizeLeadUrls } from "./url.js";
+import { carregarOperacao, renderOperacao, submitOperacao, clickOperacao } from "./operacao.js";
 
 const $app = document.getElementById("app");
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
@@ -68,6 +69,7 @@ async function carregar() {
   if (perfis?.[0]) st.perfil = { ...st.perfil, ...perfis[0], planos: perfis[0].planos || st.perfil.planos };
   st.leads = leads || []; st.buscas = buscas || []; st.carregado = true;
   st.form.cidade ||= st.perfil.cidade_padrao; st.form.uf ||= st.perfil.uf_padrao;
+  await carregarOperacao(sb);
 }
 
 async function atualizar(id, dados, msg) {
@@ -119,6 +121,7 @@ const PAGINAS = [
   ["adicionar", "Adicionar empresas", "Cadastre na mão ou importe uma planilha (não precisa da API do Google)"],
   ["fila", "Fila de envio", "Mande as mensagens uma a uma, em um clique"],
   ["leads", "Leads", "Todas as empresas encontradas"],
+  ["operacao", "Operação", "Expediente e fila de pesquisas"],
   ["config", "Configurações", "Seu nome, filtros e exportação"],
 ];
 
@@ -135,15 +138,15 @@ function render() {
     if (el && el.value !== el.defaultValue) rascunho[idc] = { valor: el.value, dono: el.dataset.dono };
   }
   $app.innerHTML = `<div class="app">
-    <aside class="lateral${st.menu ? " aberta" : ""}">
+    <aside class="lateral${st.menu ? " aberta" : ""}" id="menu-principal" aria-label="Navegação principal">
       <div class="marca"><span class="logo">${I.busca}</span><div>Lead Finder<small>prospecção local</small></div></div>
       ${PAGINAS.map(([k, r]) => `<button class="nav${pag[0] === k ? " on" : ""}" data-ir="${k}">${r}${cont[k] ? `<span class="cont">${cont[k]}</span>` : ""}</button>`).join("")}
       <div class="rodape"><span>${esc(sb.usuario()?.email || "")}</span><button data-acao="sair">Sair</button></div>
     </aside>
     <main class="conteudo">
-      <div class="topo"><button class="menu-mob" data-acao="menu" aria-label="Menu">${I.menu}</button>
-        <div><h1>${pag[1]}</h1><p>${pag[2]}</p></div></div>
-      ${({ dashboard: telaDashboard, buscar: telaBuscar, adicionar: telaAdicionar, fila: telaFila, leads: telaLeads, config: telaConfig })[pag[0]]()}
+      <div class="topo"><button class="menu-mob" data-acao="menu" aria-controls="menu-principal" aria-expanded="${st.menu}" aria-label="${st.menu ? "Fechar menu" : "Abrir menu"}">${I.menu}</button>
+        <div><h1 tabindex="-1">${pag[1]}</h1><p>${pag[2]}</p></div></div>
+      ${({ dashboard: telaDashboard, buscar: telaBuscar, adicionar: telaAdicionar, fila: telaFila, leads: telaLeads, operacao: () => renderOperacao(esc), config: telaConfig })[pag[0]]()}
     </main>
   </div>${st.aberto ? telaGaveta() : ""}`;
   if (scroll) { const g = document.querySelector(".gaveta"); if (g) g.scrollTop = scroll; }
@@ -331,7 +334,7 @@ function tabela(L) {
   return `<div class="tab-wrap"><table><thead><tr><th class="ck"><input type="checkbox" data-sel="todos" aria-label="Selecionar todas desta lista"${L.every((l) => st.sel.has(l.id)) ? " checked" : ""}></th><th>Empresa</th><th>Presença digital</th><th>Contato</th><th>Status</th><th>Demo</th></tr></thead><tbody>
   ${L.map((l) => `<tr data-abrir="${l.id}"${st.sel.has(l.id) ? ' class="marcada"' : ""}>
     <td class="ck" data-sel="${l.id}"><input type="checkbox" data-sel="${l.id}" aria-label="Selecionar ${esc(nomeCurto(l.nome))}"${st.sel.has(l.id) ? " checked" : ""}></td>
-    <td><div class="nome">${l.favorito ? '<span class="estrela">★</span> ' : ""}${esc(nomeCurto(l.nome))}</div>
+    <td><div class="nome">${l.favorito ? '<span class="estrela">★</span> ' : ""}<button class="lead-abrir" type="button" data-abrir="${l.id}" aria-label="Abrir detalhes de ${esc(nomeCurto(l.nome))}">${esc(nomeCurto(l.nome))}</button></div>
       <div class="sub">${esc(l.categoria || TEMAS[l.nicho]?.rotulo || "")} · ${esc(l.bairro || l.cidade)} · <span class="estrela">★</span> ${notaBR(l.nota)} (${milhar(l.avaliacoes)})</div>
       ${l.qualificado ? "" : `<div class="sub">${esc(l.motivo)}</div>`}</td>
     <td>${seloFalha(l)}</td>
@@ -499,6 +502,7 @@ async function buscar(ev) {
 document.addEventListener("click", async (ev) => {
   const el = ev.target.closest("[data-sel],[data-ir],[data-acao],[data-abrir],[data-filtro],[data-tipo],[data-estilo]");
   if (!el) return;
+  if (await clickOperacao(ev, sb, sb.usuario().id, toast)) { render(); return; }
   if (el.dataset.sel) {
     const lista = filtrar(st.leads);
     if (el.dataset.sel === "todos") { const tudo = lista.every((l) => st.sel.has(l.id)); lista.forEach((l) => (tudo ? st.sel.delete(l.id) : st.sel.add(l.id))); }
@@ -520,7 +524,12 @@ document.addEventListener("click", async (ev) => {
   if (el.dataset.tipo) { st.form.tipo = el.dataset.tipo; const i = document.querySelector('#f-busca [name="tipo"]'); if (i) i.value = el.dataset.tipo; document.querySelectorAll("[data-tipo]").forEach((c) => c.classList.toggle("on", c === el)); return; }
   const id = el.dataset.id, l = id && leadPorId(id), a = el.dataset.acao;
   if (a === "sair") { await sb.sair(); return render(); }
-  if (a === "menu") { st.menu = !st.menu; return render(); }
+  if (a === "menu") {
+    st.menu = !st.menu;
+    render();
+    document.querySelector(st.menu ? ".lateral .nav" : ".menu-mob")?.focus();
+    return;
+  }
   if (a === "fechar") { st.aberto = null; return render(); }
   if (a === "csv") return csv(el.dataset.qual);
   if (a === "massa-limpar") { st.sel.clear(); return render(); }
@@ -573,6 +582,7 @@ document.addEventListener("input", (ev) => {
   }
 });
 document.addEventListener("submit", async (ev) => {
+  if (await submitOperacao(ev, sb, sb.usuario().id, toast)) { render(); return; }
   if (ev.target.id === "f-busca") return buscar(ev);
   if (ev.target.id === "f-manual") {
     ev.preventDefault();
@@ -612,8 +622,20 @@ document.addEventListener("submit", async (ev) => {
     } catch (e) { toast(e.message, true); }
   }
 });
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && st.aberto) { st.aberto = null; render(); } });
-globalThis.addEventListener("hashchange", () => { st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render(); });
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Escape") return;
+  if (st.aberto) { st.aberto = null; render(); }
+  else if (st.menu) {
+    st.menu = false;
+    render();
+    document.querySelector(".menu-mob")?.focus();
+  }
+});
+globalThis.addEventListener("hashchange", () => {
+  const menuEstavaAberto = st.menu;
+  st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render();
+  if (menuEstavaAberto) document.querySelector(".topo h1")?.focus();
+});
 
 async function importarCSV(arquivo) {
   try {
@@ -638,3 +660,4 @@ async function iniciar() {
   render();
 }
 iniciar();
+

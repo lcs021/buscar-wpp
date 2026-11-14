@@ -33,17 +33,35 @@ const AGREGADORES = ["linktr.ee", "linktree", "bio.link", "beacons.ai", "linkbio
 
 export type Site = { status_site: string; site: string; instagram: string; facebook: string; whatsapp: string };
 
+function hostIgualOuSubdominio(host: string, dominio: string): boolean {
+  return host === dominio || host.endsWith(`.${dominio}`);
+}
+
+function urlWebValida(valor: string): URL | null {
+  try {
+    const url = new URL(valor);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 export function classificarSite(url?: string | null): Site {
   const r: Site = { status_site: "sem_site", site: url || "", instagram: "", facebook: "", whatsapp: "" };
   if (!url) return r;
-  const u = url.toLowerCase();
-  if (u.includes("instagram.com") || u.includes("instagr.am")) return { ...r, status_site: "instagram", instagram: url, site: "" };
-  if (u.includes("facebook.com") || u.includes("fb.com") || u.includes("fb.me")) return { ...r, status_site: "facebook", facebook: url, site: "" };
-  if (u.includes("wa.me") || u.includes("whatsapp.com") || u.includes("wa.link")) {
-    const m = url.match(/wa\.me\/(\d{10,15})/) || url.match(/phone=(\d{10,15})/);
+  const parsed = urlWebValida(url);
+  if (!parsed) return { ...r, site: "" };
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (["instagram.com", "instagr.am"].some((d) => hostIgualOuSubdominio(host, d))) return { ...r, status_site: "instagram", instagram: url, site: "" };
+  if (["facebook.com", "fb.com", "fb.me"].some((d) => hostIgualOuSubdominio(host, d))) return { ...r, status_site: "facebook", facebook: url, site: "" };
+  if (["wa.me", "whatsapp.com", "wa.link"].some((d) => hostIgualOuSubdominio(host, d))) {
+    const m = parsed.pathname.match(/\/(\d{10,15})(?:\/|$)/) || parsed.searchParams.get("phone")?.match(/^(\d{10,15})$/);
     return { ...r, status_site: "whatsapp", whatsapp: m ? m[1] : "", site: "" };
   }
-  if (AGREGADORES.some((a) => u.includes(a))) return { ...r, status_site: "link_agregador" };
+  if (AGREGADORES.some((a) => a.includes(".")
+    ? hostIgualOuSubdominio(host, a)
+    : host.split(".").includes(a))) return { ...r, status_site: "link_agregador" };
   return { ...r, status_site: "com_site" };
 }
 
@@ -190,6 +208,45 @@ export async function pesquisarPlaces(apiKey: string, tipo: string, cidade: stri
 // ------------------------------------------------------------------ Supabase (REST com o token do próprio usuário: o RLS vale)
 export type Ctx = { url: string; apikey: string; auth: string };
 
+const UFS_VALIDAS = new Set("AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" "));
+function temCaractereDeControle(valor: string): boolean {
+  for (const caractere of valor) {
+    const codigo = caractere.codePointAt(0) || 0;
+    if (codigo <= 31 || codigo === 127) return true;
+  }
+  return false;
+}
+
+export type EntradaBusca = { tipo: string; cidade: string; uf: string; bairro: string; quantidade: number };
+
+export function validarEntradaBusca(corpo: unknown): EntradaBusca {
+  if (!corpo || typeof corpo !== "object" || Array.isArray(corpo)) throw new ErroBusca("Envie os filtros da busca em formato válido.");
+  const dados = corpo as Record<string, unknown>;
+  const texto = (campo: string, max: number, obrigatorio: boolean): string => {
+    const valor = dados[campo];
+    if (valor == null && !obrigatorio) return "";
+    if (typeof valor !== "string") throw new ErroBusca(`O campo ${campo} deve ser texto.`);
+    const limpo = valor.trim();
+    if ((obrigatorio && limpo.length < 2) || limpo.length > max || temCaractereDeControle(limpo)) {
+      throw new ErroBusca(`O campo ${campo} deve ter ${obrigatorio ? "2" : "0"} a ${max} caracteres válidos.`);
+    }
+    return limpo;
+  };
+  const tipo = texto("tipo", 100, true);
+  const cidade = texto("cidade", 100, true);
+  const uf = texto("uf", 2, true).toUpperCase();
+  const bairro = texto("bairro", 100, false);
+  if (!UFS_VALIDAS.has(uf)) throw new ErroBusca("Informe uma UF brasileira válida com duas letras.");
+  let quantidade = 20;
+  if (dados.quantidade !== undefined) {
+    if (typeof dados.quantidade !== "number" || !Number.isInteger(dados.quantidade) || dados.quantidade < 1 || dados.quantidade > MAX_RESULTADOS) {
+      throw new ErroBusca(`A quantidade deve ser um número inteiro entre 1 e ${MAX_RESULTADOS}.`);
+    }
+    quantidade = dados.quantidade;
+  }
+  return { tipo, cidade, uf, bairro, quantidade };
+}
+
 async function rest(ctx: Ctx, caminho: string, init: RequestInit = {}) {
   const r = await fetch(`${ctx.url}/rest/v1/${caminho}`, {
     ...init,
@@ -213,25 +270,24 @@ const CAMPOS_BUSCA = ["place_id", "nome", "categoria", "nicho", "telefone", "cel
   "motivo", "busca_termo"];
 
 // deno-lint-ignore no-explicit-any
-export async function executarBusca(ctx: Ctx, apiKey: string, corpo: any, espera?: (ms: number) => Promise<unknown>) {
-  const tipo = String(corpo?.tipo || "").trim();
-  const cidade = String(corpo?.cidade || "").trim();
-  const uf = String(corpo?.uf || "").trim();
-  const bairro = String(corpo?.bairro || "").trim();
-  if (tipo.length < 2 || cidade.length < 2 || uf.length < 2) throw new ErroBusca("Preencha tipo de empresa, cidade e estado.");
+async function executarBuscaComUsuario(ctx: Ctx, apiKey: string, corpo: any, espera?: (ms: number) => Promise<unknown>, userIdInterno?: string) {
+  const { tipo, cidade, uf, bairro, quantidade } = validarEntradaBusca(corpo);
   if (!apiKey) throw new ErroBusca("A chave GOOGLE_PLACES_API_KEY não foi configurada nos segredos das Edge Functions.", 500);
 
-  const userId = await usuarioAtual(ctx);
+  const userId = userIdInterno || await usuarioAtual(ctx);
   const perfis = await rest(ctx, `perfis?select=nota_minima,avaliacoes_minimas&user_id=eq.${userId}`);
   const c: Criterios = {
     nota_minima: Number(perfis?.[0]?.nota_minima ?? 4.5),
     avaliacoes_minimas: Number(perfis?.[0]?.avaliacoes_minimas ?? 20),
   };
 
-  const permitido = await rest(ctx, "rpc/limitar_busca", { method: "POST", body: "{}" });
+  const permitido = await rest(ctx, userIdInterno ? "rpc/limitar_busca_operacao" : "rpc/limitar_busca", {
+    method: "POST",
+    body: userIdInterno ? JSON.stringify({ p_user_id: userIdInterno }) : "{}",
+  });
   if (permitido !== true) throw new ErroBusca("Limite de 5 buscas por minuto atingido. Aguarde um minuto e tente novamente.", 429);
 
-  const { termo, empresas } = await pesquisarPlaces(apiKey, tipo, cidade, uf, bairro, Number(corpo?.quantidade) || 20, c, espera);
+  const { termo, empresas } = await pesquisarPlaces(apiKey, tipo, cidade, uf, bairro, quantidade, c, espera);
 
   let novos = 0;
   // deno-lint-ignore no-explicit-any
@@ -264,6 +320,15 @@ export async function executarBusca(ctx: Ctx, apiKey: string, corpo: any, espera
   return { termo, total: gravados.length, novos, qualificados, leads: gravados };
 }
 
+export function executarBusca(ctx: Ctx, apiKey: string, corpo: unknown, espera?: (ms: number) => Promise<unknown>) {
+  return executarBuscaComUsuario(ctx, apiKey, corpo, espera);
+}
+
+export function executarBuscaAgendada(ctx: Ctx, apiKey: string, userId: string, corpo: unknown) {
+  if (!userId) throw new ErroBusca("Usuário inválido para busca agendada.", 400);
+  return executarBuscaComUsuario(ctx, apiKey, corpo, undefined, userId);
+}
+
 // ------------------------------------------------------------------ servidor
 export async function handler(req: Request, env: (k: string) => string | undefined): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -289,3 +354,4 @@ export async function handler(req: Request, env: (k: string) => string | undefin
 // deno-lint-ignore no-explicit-any
 const D = (globalThis as any).Deno;
 if (D?.serve && import.meta.main) D.serve((req: Request) => handler(req, (k) => D.env.get(k)));
+

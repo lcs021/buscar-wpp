@@ -100,6 +100,10 @@ Dica: mande poucas por dia (10 a 20) e responda rápido quem retornar. Para tele
 - **Google Places**: cada busca de até 20 empresas é uma chamada; 60 empresas são 3 chamadas. Como pedimos telefone e site, as chamadas entram na faixa mais cara da Text Search. Confira a cota grátis e os preços atuais em https://developers.google.com/maps/billing-and-pricing/pricing e defina um limite de gastos no Google Cloud.
 - Os termos do Google Maps Platform limitam por quanto tempo dados do Places podem ser guardados. Use o sistema como lista de prospecção ativa e exclua leads antigos que você não for trabalhar.
 
+## Operacao agendada
+
+A fila persistente de pesquisas, janela de expediente, pausa/retomada e historico de tentativas estao descritos em [docs/OPERACAO.md](docs/OPERACAO.md). O worker executa somente pesquisas; nenhum contato comercial e enviado automaticamente.
+
 ## Estrutura
 
 ```
@@ -136,3 +140,4 @@ supabase functions deploy buscar-empresas --no-verify-jwt
 - **"O Google recusou a chave"**: confira o segredo `GOOGLE_PLACES_API_KEY` e se ativou a *Places API (New)*, não a antiga.
 - **"permission denied for table"**: rode o SQL do passo 2 de novo (ele libera as tabelas para usuários logados).
 - **Link da demo diz "não está disponível"**: a demo ainda não foi publicada (clique em *Publicar demo*), ou o projeto do Supabase está pausado.
+
