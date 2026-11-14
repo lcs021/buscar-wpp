@@ -9,6 +9,12 @@ type Job = {
   payload: unknown;
 };
 
+class RestError extends Error {
+  constructor(readonly status: number) {
+    super(`Supabase returned ${status}`);
+  }
+}
+
 async function segredoIgual(a: string, b: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const [hashA, hashB] = await Promise.all([
@@ -32,9 +38,28 @@ async function rest(base: string, ctx: Ctx, path: string, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+  if (!response.ok) throw new RestError(response.status);
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+export async function finalizarComRetry(
+  base: string,
+  ctx: Ctx,
+  body: { p_job_id: string; p_sucesso: boolean; p_resultado: unknown; p_erro: string },
+  espera: (ms: number) => Promise<unknown> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<void> {
+  const maxTentativas = 3;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      await rest(base, ctx, "rpc/finalizar_operacao_job", body);
+      return;
+    } catch (error) {
+      const podeRepetir = !(error instanceof RestError) || error.status >= 500;
+      if (!podeRepetir || tentativa === maxTentativas) throw error;
+      await espera(100 * tentativa);
+    }
+  }
 }
 
 export async function handler(
@@ -63,18 +88,12 @@ export async function handler(
   try {
     const jobs: Job[] = await rest(url, ctx, "rpc/claim_operacao_jobs", { p_limit: 10 }) || [];
     const results = await Promise.all(jobs.map(async (job) => {
+      let result: { total: number; novos: number; qualificados: number };
       try {
-        const result = await executarBuscaAgendada(ctx, placesKey, job.user_id, job.payload);
-        await rest(url, ctx, "rpc/finalizar_operacao_job", {
-          p_job_id: job.id,
-          p_sucesso: true,
-          p_resultado: { total: result.total, novos: result.novos, qualificados: result.qualificados },
-          p_erro: "",
-        });
-        return { status: "succeeded" };
+        result = await executarBuscaAgendada(ctx, placesKey, job.user_id, job.payload);
       } catch (error) {
         const reason = error instanceof Error ? error.message : "Erro desconhecido na tarefa.";
-        await rest(url, ctx, "rpc/finalizar_operacao_job", {
+        await finalizarComRetry(url, ctx, {
           p_job_id: job.id,
           p_sucesso: false,
           p_resultado: {},
@@ -82,6 +101,13 @@ export async function handler(
         });
         return { status: "failed" };
       }
+      await finalizarComRetry(url, ctx, {
+        p_job_id: job.id,
+        p_sucesso: true,
+        p_resultado: { total: result.total, novos: result.novos, qualificados: result.qualificados },
+        p_erro: "",
+      });
+      return { status: "succeeded" };
     }));
     return json({ claimed: jobs.length, succeeded: results.filter((r) => r.status === "succeeded").length, failed: results.filter((r) => r.status === "failed").length });
   } catch {
