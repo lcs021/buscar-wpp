@@ -1,0 +1,48 @@
+name: Testes e lint
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Testes
+        run: deno test tests/
+      - name: Lint
+        run: deno lint tests/ web/url.js web/csv.js supabase/functions/buscar-empresas/
+  postgres-rate-limit:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lead_finder_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lead_finder_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Preparar fixture isolada
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-setup.sql
+      - name: Validar migração e limite por usuário
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114000000_limite_buscas.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-rate-limit.sql

@@ -26,6 +26,9 @@ Tudo roda no Supabase (banco, login e busca) e numa hospedagem grátis de site e
 ### 2b. Planos e valores
 Rode também `supabase/migrations/20261111010000_propostas.sql` no SQL Editor. Ele cria os campos de planos, preços e condições. Os valores só aparecem nas mensagens de WhatsApp, nunca no site.
 
+### 2c. Limite de buscas
+Rode `supabase/migrations/20261114000000_limite_buscas.sql` no SQL Editor. A função de busca passa a limitar cada usuário autenticado a 5 consultas por minuto antes de chamar o Google Places. Essa migração precisa estar aplicada antes de publicar a versão atualizada da Edge Function.
+
 ### 3. Criar seu usuário
 1. **Authentication > Users > Add user > Create new user**: coloque seu e-mail e uma senha, marque **Auto Confirm User**.
 2. Recomendado: em **Authentication > Sign In / Providers**, desligue **Allow new users to sign up**. Assim só você entra.

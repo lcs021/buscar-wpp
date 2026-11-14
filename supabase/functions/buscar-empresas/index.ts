@@ -228,6 +228,9 @@ export async function executarBusca(ctx: Ctx, apiKey: string, corpo: any, espera
     avaliacoes_minimas: Number(perfis?.[0]?.avaliacoes_minimas ?? 20),
   };
 
+  const permitido = await rest(ctx, "rpc/limitar_busca", { method: "POST", body: "{}" });
+  if (permitido !== true) throw new ErroBusca("Limite de 5 buscas por minuto atingido. Aguarde um minuto e tente novamente.", 429);
+
   const { termo, empresas } = await pesquisarPlaces(apiKey, tipo, cidade, uf, bairro, Number(corpo?.quantidade) || 20, c, espera);
 
   let novos = 0;
@@ -285,4 +288,4 @@ export async function handler(req: Request, env: (k: string) => string | undefin
 
 // deno-lint-ignore no-explicit-any
 const D = (globalThis as any).Deno;
-if (D?.serve) D.serve((req: Request) => handler(req, (k) => D.env.get(k)));
+if (D?.serve && import.meta.main) D.serve((req: Request) => handler(req, (k) => D.env.get(k)));

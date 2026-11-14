@@ -1,3 +1,5 @@
+import { safeHttpUrl } from "./url.js";
+
 // Temas por nicho, gerador do site demo e da mensagem de WhatsApp.
 // Usado pelo painel (pré-visualização) e pela página pública demo.html.
 
@@ -114,7 +116,7 @@ export function numeroWhats(l) {
   if (l.celular) { let d = digitos(l.telefone); if (d.length === 13 && d.startsWith("55")) return d; return "55" + d.replace(/^0+/, ""); }
   return "";
 }
-export const linkMaps = (l) => l.maps_url || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${l.nome}, ${l.endereco}`);
+export const linkMaps = (l) => safeHttpUrl(l.maps_url) || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${l.nome}, ${l.endereco}`);
 
 export function iniciais(nome) {
   const ign = new Set(["de", "da", "do", "das", "dos", "e", "&", "o", "a"]);
@@ -124,7 +126,7 @@ export function iniciais(nome) {
 // "Legendários Barbearia | Barbearia em Nova Iguaçu" -> "Legendários Barbearia"
 export const nomeCurto = (n) => String(n || "").split(/\s[|•·]\s/)[0].trim();
 // Link que vai na mensagem: o site próprio do lead (leads.site_demo), ou o site cinematográfico gerado na hora.
-export const linkSite = (l) => (l && l.site_demo) || new URL(`site.html?s=${encodeURIComponent(l.slug)}`, location.href.replace(/[#?].*$/, "")).href;
+export const linkSite = (l) => safeHttpUrl(l && l.site_demo) || new URL(`site.html?s=${encodeURIComponent(l.slug)}`, location.href.replace(/[#?].*$/, "")).href;
 // Demo antigo: continua no ar para os links que já foram enviados.
 export const linkDemo = (slug) => new URL(`demo.html?s=${encodeURIComponent(slug)}`, location.href.replace(/[#?].*$/, "")).href;
 
@@ -224,7 +226,7 @@ export function montarLead(c, perfil = {}) {
     bairro: String(c.bairro || "").trim(),
     cidade: String(c.cidade || perfil.cidade_padrao || "").trim(),
     uf: String(c.uf || perfil.uf_padrao || "").trim(),
-    maps_url: String(c.maps_url || "").trim(),
+    maps_url: safeHttpUrl(c.maps_url),
     site: "", instagram: "", facebook: "",
     status_site: c.status_site || "sem_site",
     nota: Number.isFinite(nota) ? Math.min(5, Math.max(0, nota)) : null,
@@ -232,11 +234,11 @@ export function montarLead(c, perfil = {}) {
     busca_termo: c.origem || "manual",
   };
   const link = String(c.link || "").trim();
-  if (l.status_site === "instagram") l.instagram = link || String(c.instagram || "");
-  else if (l.status_site === "facebook") l.facebook = link || String(c.facebook || "");
-  else if (link) l.site = link;
-  if (c.instagram && !l.instagram) l.instagram = String(c.instagram).trim();
-  if (c.facebook && !l.facebook) l.facebook = String(c.facebook).trim();
+  if (l.status_site === "instagram") l.instagram = safeHttpUrl(link || c.instagram);
+  else if (l.status_site === "facebook") l.facebook = safeHttpUrl(link || c.facebook);
+  else if (link) l.site = safeHttpUrl(link);
+  if (c.instagram && !l.instagram) l.instagram = safeHttpUrl(c.instagram);
+  if (c.facebook && !l.facebook) l.facebook = safeHttpUrl(c.facebook);
   l.celular = ehCelularBR(l.telefone);
   // mesma empresa (nome + telefone) não duplica
   l.place_id = "manual:" + (l.nome + "|" + digitos(l.telefone)).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9|]+/g, "-");

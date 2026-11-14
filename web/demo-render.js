@@ -2,6 +2,7 @@
 //   abertura, seções, títulos e formulário mudam conforme o nicho (veja RECEITAS).
 //   Nada é inventado: nota/avaliações, endereço e telefone vêm da ficha pública; serviços e fotos são exemplos sinalizados.
 import { TEMAS, svg, esc, digitos, notaBR, milhar, numeroWhats, linkMaps, nomeCurto, iniciais } from "./shared.js";
+import { sanitizeLeadUrls } from "./url.js";
 
 const F = (familias) => "https://fonts.googleapis.com/css2?" + familias.map((f) => "family=" + f).join("&") + "&display=swap";
 
@@ -924,6 +925,7 @@ function jsonLD(x, l) {
 }
 
 export function renderDemo(l, { preview = false } = {}) {
+  l = sanitizeLeadUrls(l);
   const x = dados(l);
   const desc = `${x.t.rotulo}${x.lugar ? ` em ${x.lugar}` : ""}. ${x.t.chamada}${x.temNota ? ` Nota ${notaBR(l.nota)} no Google.` : ""}`;
   return `<!doctype html>
