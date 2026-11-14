@@ -14,5 +14,8 @@ Deno.test("empty schedule means now and malformed date is rejected", () => {
   let error: unknown;
   try { timeInSaoPaulo("not-a-date"); } catch (caught) { error = caught; }
   if (!(error instanceof Error)) throw new Error("malformed schedule must be rejected");
+  error = undefined;
+  try { timeInSaoPaulo("2026-02-30T10:30"); } catch (caught) { error = caught; }
+  if (!(error instanceof Error)) throw new Error("impossible calendar date must be rejected");
 });
 

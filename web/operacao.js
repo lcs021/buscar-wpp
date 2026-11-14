@@ -100,6 +100,12 @@ export function renderOperacao(esc) {
 
 export function timeInSaoPaulo(localValue) {
   if (!localValue) return new Date().toISOString();
+  const partes = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(localValue);
+  if (!partes) throw new Error("Data e hora inválidas.");
+  const [, ano, mes, dia, hora, minuto] = partes.map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia, hora, minuto));
+  if (data.getUTCFullYear() !== ano || data.getUTCMonth() !== mes - 1 || data.getUTCDate() !== dia
+    || data.getUTCHours() !== hora || data.getUTCMinutes() !== minuto) throw new Error("Data e hora inválidas.");
   const iso = new Date(`${localValue}:00-03:00`);
   if (!Number.isFinite(iso.getTime())) throw new Error("Data e hora inválidas.");
   return iso.toISOString();
