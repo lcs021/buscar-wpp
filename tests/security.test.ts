@@ -53,6 +53,7 @@ Deno.test("importação e demos públicas descartam destinos não HTTP(S)", () =
 Deno.test("CSV neutraliza fórmulas e preserva escaping de aspas", () => {
   assertEquals(csvCell("=1+1"), `"'=1+1"`);
   assertEquals(csvCell("  @SUM(A1:A2)"), `"'  @SUM(A1:A2)"`);
+  assertEquals(csvCell("\u0000=1+1"), `"'\u0000=1+1"`);
   assertEquals(csvCell('texto "normal"'), `"texto ""normal"""`);
   assertEquals(csvCell("-3"), `"'-3"`);
 });

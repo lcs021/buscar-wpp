@@ -8,6 +8,16 @@ BEGIN
   END IF;
 END $$;
 
+DO $$
+DECLARE
+  novo_slug text;
+BEGIN
+  INSERT INTO public.leads DEFAULT VALUES RETURNING slug INTO novo_slug;
+  IF length(novo_slug) < 16 THEN
+    RAISE EXCEPTION 'new public slugs should have at least 64 bits';
+  END IF;
+END $$;
+
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 

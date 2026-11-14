@@ -21,3 +21,7 @@ $$;
 INSERT INTO auth.users (id) VALUES
   ('00000000-0000-4000-8000-000000000001'),
   ('00000000-0000-4000-8000-000000000002');
+
+CREATE TABLE public.leads (
+  slug text NOT NULL DEFAULT substr(replace(gen_random_uuid()::text, '-', ''), 1, 10)
+);

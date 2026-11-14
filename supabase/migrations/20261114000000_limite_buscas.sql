@@ -1,6 +1,10 @@
 -- Limita chamadas à Google Places por usuário sem confiar em dados editáveis pelo cliente.
 -- Execute depois das migrações anteriores no Supabase SQL Editor.
 
+-- Aumenta o espaço de busca dos links públicos para novos leads; slugs já emitidos permanecem válidos.
+alter table public.leads alter column slug set default
+  substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
+
 create table if not exists public.limites_busca (
   user_id uuid primary key references auth.users (id) on delete cascade,
   janela_inicio timestamptz not null default now(),
