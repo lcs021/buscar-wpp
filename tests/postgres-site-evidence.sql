@@ -15,7 +15,7 @@ VALUES ('00000000-0000-4000-8000-000000000001', 4.5, 20);
 INSERT INTO public.leads (id, user_id, place_id, nome, telefone, site, status_site, nota, avaliacoes)
 VALUES
   ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'fixture:lead-a', 'Empresa Fictícia A', '11900000000', 'https://synthetic.example', 'com_site', 4.8, 40),
-  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 'fixture:lead-b', 'Empresa Fictícia B', '', 'sem_site', 4.8, 40);
+  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 'fixture:lead-b', 'Empresa Fictícia B', '', '', 'sem_site', 4.8, 40);
 
 SELECT public.confirmar_presenca_digital('10000000-0000-4000-8000-000000000001', false);
 SELECT public.confirmar_presenca_digital('10000000-0000-4000-8000-000000000002', true);
@@ -39,7 +39,7 @@ BEGIN
   IF other_row.site_evidence_status <> 'unverified'
      OR other_row.site_evidence_at IS NOT NULL
      OR other_row.status_site <> 'sem_site' THEN
-    RAISE EXCEPTION 'a user must not change evidence on another user\'s lead';
+    RAISE EXCEPTION 'a user must not change evidence on another user''s lead';
   END IF;
 END $$;
 RESET ROLE;
