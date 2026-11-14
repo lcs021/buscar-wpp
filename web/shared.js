@@ -92,7 +92,7 @@ export const TEMAS = {
 };
 
 export const FALHAS = {
-  sem_site: "Sem site",
+  sem_site: "Sem URL de site informada",
   instagram: "Só Instagram",
   facebook: "Só Facebook",
   whatsapp: "Só WhatsApp",
@@ -201,6 +201,7 @@ export function statusSiteDe(texto, url = "") {
 export function qualificarLocal(l, perfil = {}) {
   const min = Number(perfil.nota_minima ?? 4.5), minAv = Number(perfil.avaliacoes_minimas ?? 20);
   const m = [];
+  if (l.site_evidence_status === "unverified" || !l.site_evidence_status) m.push("presença digital ainda não verificada");
   if (l.status_site === "com_site") m.push("já tem site próprio");
   if (l.status_site === "link_agregador") m.push("a ficha já leva para uma página de pedido/agenda (o dono costuma chamar de site)");
   if (l.nota != null && l.nota < min) m.push(`nota ${notaBR(l.nota)} abaixo de ${notaBR(min)}`);
@@ -208,9 +209,14 @@ export function qualificarLocal(l, perfil = {}) {
   if (!l.telefone && !l.whatsapp) m.push("sem telefone");
   if (m.length) return { qualificado: false, motivo: "Fora do filtro: " + m.join("; ") };
   const prova = l.nota != null && l.avaliacoes != null ? `nota ${notaBR(l.nota)} com ${milhar(l.avaliacoes)} avaliações` : "cadastrada por você";
-  const falha = { sem_site: "não tem site", instagram: "o site da ficha é só o Instagram", facebook: "o site da ficha é só o Facebook",
+  const falha = { sem_site: l.site_evidence_status === "confirmed_no_site" ? "site próprio confirmado como ausente" : "Google Places não informou URL de site nesta consulta",
+    instagram: "o site da ficha é só o Instagram", facebook: "o site da ficha é só o Facebook",
     whatsapp: "o site da ficha é só o WhatsApp", link_agregador: "o site da ficha é só um link de pedido/agenda/cardápio" }[l.status_site] || "não tem site";
   return { qualificado: true, motivo: `Bom negócio (${prova}) e ${falha}.` };
+}
+const CAMPOS_CRM = new Set(["status", "favorito", "observacoes", "mensagem", "demo_publicada", "visualizacoes", "ultima_visualizacao", "enviado_em"]);
+export function leadParaGravacao(l) {
+  return Object.fromEntries(Object.entries(l).filter(([k]) => !CAMPOS_CRM.has(k)));
 }
 // Monta a linha do banco a partir dos campos digitados/importados
 export function montarLead(c, perfil = {}) {
@@ -229,6 +235,9 @@ export function montarLead(c, perfil = {}) {
     maps_url: safeHttpUrl(c.maps_url),
     site: "", instagram: "", facebook: "",
     status_site: c.status_site || "sem_site",
+    site_evidence_status: "unverified",
+    site_evidence_source: c.origem === "planilha" ? "csv" : "manual",
+    site_evidence_at: null,
     nota: Number.isFinite(nota) ? Math.min(5, Math.max(0, nota)) : null,
     avaliacoes: Number.isFinite(av) ? av : null,
     busca_termo: c.origem || "manual",

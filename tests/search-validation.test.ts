@@ -1,6 +1,8 @@
 import {
   classificarSite,
   ErroBusca,
+  normalizar,
+  qualificar,
   validarEntradaBusca,
 } from "../supabase/functions/buscar-empresas/index.ts";
 
@@ -17,6 +19,30 @@ Deno.test("site classifier compares parsed hostnames rather than arbitrary URL t
   assertEquals(classificarSite("https://instagram.com.evil.example").status_site, "com_site");
   assertEquals(classificarSite("https://loja.example/path/ifood.com.br").status_site, "com_site");
   assertEquals(classificarSite("javascript:alert(1)").status_site, "sem_site");
+});
+
+Deno.test("Places evidence distinguishes an omitted website URL from a returned URL", () => {
+  const criteria = { nota_minima: 4.5, avaliacoes_minimas: 20 };
+  const fixture = {
+    id: "places/synthetic-fixture",
+    displayName: { text: "Empresa Fictícia de Teste" },
+    primaryTypeDisplayName: { text: "Loja" },
+    nationalPhoneNumber: "+55 11 90000-0000",
+    rating: 4.8,
+    userRatingCount: 25,
+  };
+  const withoutUrl = normalizar(fixture, "loja sintética", "loja", criteria);
+  assertEquals(withoutUrl.site_evidence_status, "url_not_reported");
+  assertEquals(withoutUrl.site_evidence_source, "google_places");
+  assertEquals(Number.isFinite(Date.parse(withoutUrl.site_evidence_at)), true);
+  assertEquals(withoutUrl.qualificado, true);
+  assertEquals(withoutUrl.motivo.includes("não confirma que a empresa não tenha site"), true);
+
+  const withUrl = normalizar({ ...fixture, websiteUri: "https://synthetic.example" }, "loja sintética", "loja", criteria);
+  assertEquals(withUrl.site_evidence_status, "url_reported");
+  assertEquals(withUrl.status_site, "com_site");
+  assertEquals(withUrl.qualificado, false);
+  assertEquals(qualificar({ ...withoutUrl, status_site: "com_site" }, criteria).qualificado, false);
 });
 
 Deno.test("search inputs enforce Brazilian UF, text bounds, and quantity", () => {
