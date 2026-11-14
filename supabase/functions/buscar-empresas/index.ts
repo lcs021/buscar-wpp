@@ -37,6 +37,13 @@ function hostIgualOuSubdominio(host: string, dominio: string): boolean {
   return host === dominio || host.endsWith(`.${dominio}`);
 }
 
+const SUFIXOS_COMERCIAIS = ["com", "com.br", "br", "app", "ai", "co", "cc", "to", "net", "site", "bio", "link", "io", "me"];
+
+function hostDeAgregador(host: string, nome: string): boolean {
+  if (nome.includes(".")) return hostIgualOuSubdominio(host, nome);
+  return SUFIXOS_COMERCIAIS.some((sufixo) => hostIgualOuSubdominio(host, `${nome}.${sufixo}`));
+}
+
 function urlWebValida(valor: string): URL | null {
   try {
     const url = new URL(valor);
@@ -59,9 +66,7 @@ export function classificarSite(url?: string | null): Site {
     const m = parsed.pathname.match(/\/(\d{10,15})(?:\/|$)/) || parsed.searchParams.get("phone")?.match(/^(\d{10,15})$/);
     return { ...r, status_site: "whatsapp", whatsapp: m ? m[1] : "", site: "" };
   }
-  if (AGREGADORES.some((a) => a.includes(".")
-    ? hostIgualOuSubdominio(host, a)
-    : host.split(".").includes(a))) return { ...r, status_site: "link_agregador" };
+  if (AGREGADORES.some((a) => hostDeAgregador(host, a))) return { ...r, status_site: "link_agregador" };
   return { ...r, status_site: "com_site" };
 }
 

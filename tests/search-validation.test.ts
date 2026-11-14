@@ -16,6 +16,8 @@ Deno.test("site classifier compares parsed hostnames rather than arbitrary URL t
   assertEquals(classificarSite("https://loja.example/instagram.com").status_site, "com_site");
   assertEquals(classificarSite("https://instagram.com.evil.example").status_site, "com_site");
   assertEquals(classificarSite("https://loja.example/path/ifood.com.br").status_site, "com_site");
+  assertEquals(classificarSite("https://goomer.com.br/loja").status_site, "link_agregador");
+  assertEquals(classificarSite("https://goomer.evil.example").status_site, "com_site");
   assertEquals(classificarSite("javascript:alert(1)").status_site, "sem_site");
 });
 
