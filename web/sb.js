@@ -40,7 +40,7 @@ export async function entrar(email, senha) {
   catch (e) { if (e.status === 400) e.message = "E-mail ou senha incorretos."; throw e; }
 }
 
-export async function sair() {
+export function sair() {
   const t = sessao?.access_token;
   gravar(null);
   if (t) fetch(`${URL_BASE}/auth/v1/logout`, { method: "POST", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${t}` } }).catch(() => {});
@@ -52,7 +52,7 @@ async function token() {
   const agora = Math.floor(Date.now() / 1000);
   if (sessao.expires_at && sessao.expires_at - agora < 60) {
     renovando ||= tokenAuth("refresh_token", { refresh_token: sessao.refresh_token }).finally(() => (renovando = null));
-    try { await renovando; } catch (e) { gravar(null); throw Object.assign(new Error("Sessão expirada. Entre de novo."), { status: 401 }); }
+    try { await renovando; } catch { gravar(null); throw Object.assign(new Error("Sessão expirada. Entre de novo."), { status: 401 }); }
   }
   return sessao.access_token;
 }

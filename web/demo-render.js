@@ -2,6 +2,7 @@
 //   abertura, seções, títulos e formulário mudam conforme o nicho (veja RECEITAS).
 //   Nada é inventado: nota/avaliações, endereço e telefone vêm da ficha pública; serviços e fotos são exemplos sinalizados.
 import { TEMAS, svg, esc, digitos, notaBR, milhar, numeroWhats, linkMaps, nomeCurto, iniciais } from "./shared.js";
+import { sanitizeLeadUrls } from "./url.js";
 
 const F = (familias) => "https://fonts.googleapis.com/css2?" + familias.map((f) => "family=" + f).join("&") + "&display=swap";
 
@@ -443,7 +444,7 @@ function heroLetreiro(x, l) {
   </section>`;
 }
 
-function heroOS(x, l) {
+function heroOS(x, _l) {
   const { t } = x;
   const itens = t.servicos.map(([s, desc]) => `<li><span class="caixa" aria-hidden="true">${svg("check", 13, 2.6)}</span><div><b>${esc(s)}</b><span>${esc(desc)}</span></div><a class="os-sel" href="#contato" data-servico="${esc(s)}" aria-label="Pedir orçamento de ${esc(s)}">Orçar</a></li>`).join("");
   return `<section class="hero h-os${x.espelho ? " espelho" : ""}">
@@ -483,7 +484,7 @@ function heroAgenda(x, l) {
   </section>`;
 }
 
-function heroVitrine(x, l) {
+function heroVitrine(x, _l) {
   const { t } = x;
   return `<section class="hero h-vitrine${x.espelho ? " espelho" : ""}">
     <figure class="h-foto">${img(x.ids[0], `${t.rotulo} (foto ilustrativa)`, { larg: 1600, sizes: "100vw", prioridade: true, w: 1600, h: 1000 })}${fotoTag}</figure>
@@ -924,6 +925,7 @@ function jsonLD(x, l) {
 }
 
 export function renderDemo(l, { preview = false } = {}) {
+  l = sanitizeLeadUrls(l);
   const x = dados(l);
   const desc = `${x.t.rotulo}${x.lugar ? ` em ${x.lugar}` : ""}. ${x.t.chamada}${x.temNota ? ` Nota ${notaBR(l.nota)} no Google.` : ""}`;
   return `<!doctype html>

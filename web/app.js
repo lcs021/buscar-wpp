@@ -1,6 +1,8 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
+import { csvCell } from "./csv.js";
+import { sanitizeLeadUrls } from "./url.js";
 
 const $app = document.getElementById("app");
 const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
@@ -82,7 +84,7 @@ async function atualizar(id, dados, msg) {
 
 // Enviar: abre o WhatsApp na hora (precisa ser direto no clique) e depois marca como enviado + publica a demo.
 function enviarWhats(l, texto) {
-  window.open(linkWhats(l, texto), "_blank", "noopener");
+  globalThis.open(linkWhats(l, texto), "_blank", "noopener");
   const dados = { status: "enviado", enviado_em: new Date().toISOString(), demo_publicada: true };
   if (texto !== mensagemEstilo("padrao", l, st.perfil, linkSite(l))) dados.mensagem = texto;
   return atualizar(l.id, dados, "Marcado como enviado. Confira o envio no WhatsApp.");
@@ -372,8 +374,9 @@ function telaFila() {
 }
 
 function telaGaveta() {
-  const l = leadPorId(st.aberto) || st.busca?.leads.find((x) => x.id === st.aberto);
-  if (!l) return "";
+  const lead = leadPorId(st.aberto) || st.busca?.leads.find((x) => x.id === st.aberto);
+  if (!lead) return "";
+  const l = sanitizeLeadUrls(lead);
   const num = numeroWhats(l);
   const link = linkSite(l);
   return `<div class="fundo" data-acao="fechar"></div><aside class="gaveta">
@@ -470,7 +473,7 @@ function csv(qual) {
     ["Link na ficha", (l) => l.site || l.instagram || l.facebook], ["Qualificada", (l) => (l.qualificado ? "Sim" : "Não")], ["Motivo", (l) => l.motivo],
     ["Status", (l) => STATUS[l.status]], ["Enviado em", (l) => (l.enviado_em ? new Date(l.enviado_em).toLocaleString("pt-BR") : "")],
     ["Visualizações da demo", (l) => l.visualizacoes], ["Link da demo", (l) => linkSite(l)], ["Google Maps", (l) => l.maps_url], ["Observações", (l) => l.observacoes]];
-  const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const q = csvCell;
   const txt = "﻿" + [cols.map((c) => q(c[0])).join(";"), ...L.map((l) => cols.map((c) => q(c[1](l))).join(";"))].join("\r\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv;charset=utf-8" }));
@@ -539,7 +542,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "copiar-proposta" || a === "enviar-proposta") {
     const texto = mensagemEstilo("proposta", l, st.perfil, linkSite(l));
     if (a === "copiar-proposta") { navigator.clipboard?.writeText(texto).then(() => toast("Proposta copiada."), () => toast("Não deu para copiar.", true)); return; }
-    window.open(linkWhats(l, texto), "_blank", "noopener");
+    globalThis.open(linkWhats(l, texto), "_blank", "noopener");
     const dados = { demo_publicada: true };
     if (["novo", "enviado"].includes(l.status)) dados.status = "respondeu";
     return atualizar(l.id, dados, "Proposta aberta no WhatsApp.");
@@ -610,7 +613,7 @@ document.addEventListener("submit", async (ev) => {
   }
 });
 document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && st.aberto) { st.aberto = null; render(); } });
-window.addEventListener("hashchange", () => { st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render(); });
+globalThis.addEventListener("hashchange", () => { st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render(); });
 
 async function importarCSV(arquivo) {
   try {

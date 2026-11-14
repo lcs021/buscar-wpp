@@ -2,7 +2,8 @@
 //   a abertura é uma cena presa na tela que avança e volta com a rolagem (três fotos, três legendas, um quadro final),
 //   e a página assenta no site de verdade logo abaixo (as mesmas seções por ramo do demo-render.js).
 //   Roda igual no celular e no computador. Nada é inventado: nota, avaliações, endereço e telefone vêm da ficha pública.
-import { svg, esc, notaBR, milhar } from "./shared.js";
+import { esc, notaBR, milhar } from "./shared.js";
+import { sanitizeLeadUrls } from "./url.js";
 import { _pecas } from "./demo-render.js";
 
 const { dados, img, botao, estrelas, montar, css, SCRIPT, jsonLD } = _pecas;
@@ -136,6 +137,7 @@ const contador = (slug, sb) => `
 // renderSite(lead)                       -> página gerada na hora (site.html?s=<slug> e pré-visualização do painel)
 // renderSite(lead, { url, supabase })    -> arquivo publicado: ganha prévia de link (WhatsApp) e conta as visualizações
 export function renderSite(l, { preview = false, url = "", supabase = null } = {}) {
+  l = sanitizeLeadUrls(l);
   const x = dados(l);
   const titulo = `${x.nome} | ${x.t.rotulo}${l.bairro ? ` em ${l.bairro}` : ""}`;
   const desc = `${x.t.rotulo}${x.lugar ? ` em ${x.lugar}` : ""}. ${x.t.chamada}${x.temNota ? ` Nota ${notaBR(l.nota)} no Google.` : ""}`;
