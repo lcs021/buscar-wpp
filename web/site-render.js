@@ -4,9 +4,17 @@
 //   Roda igual no celular e no computador. Nada é inventado: nota, avaliações, endereço e telefone vêm da ficha pública.
 import { esc, notaBR, milhar } from "./shared.js";
 import { sanitizeLeadUrls } from "./url.js";
-import { _pecas } from "./demo-render.js";
+import { getDemoRendererPieces } from "./demo-render.js";
 
-const { dados, img, botao, estrelas, montar, css, SCRIPT, jsonLD } = _pecas;
+const pecas = () => getDemoRendererPieces();
+const dados = (...args) => pecas().dados(...args);
+const img = (...args) => pecas().img(...args);
+const botao = (...args) => pecas().botao(...args);
+const estrelas = (...args) => pecas().estrelas(...args);
+const montar = (...args) => pecas().montar(...args);
+const css = (...args) => pecas().css(...args);
+const SCRIPT = () => pecas().SCRIPT;
+const jsonLD = (...args) => pecas().jsonLD(...args);
 
 // ---------------------------------------------------------------- abertura guiada pela rolagem
 function heroCinema(x, l) {
@@ -153,6 +161,6 @@ export function renderSite(l, { preview = false, url = "", supabase = null } = {
 <body class="seg-${esc(l.nicho || "generico")} cinema">
 <div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial.${preview ? " (pré-visualização)" : ""}</div>
 ${montar(x, l, heroCinema)}
-<script>${SCRIPT}${SCRIPT_CINE}${supabase && l.slug ? contador(l.slug, supabase) : ""}</script>
+<script>${SCRIPT()}${SCRIPT_CINE}${supabase && l.slug ? contador(l.slug, supabase) : ""}</script>
 </body></html>`;
 }
