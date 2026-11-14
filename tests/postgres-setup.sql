@@ -8,6 +8,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$ BEGIN
+  CREATE ROLE service_role NOLOGIN BYPASSRLS;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE SCHEMA auth;
 CREATE TABLE auth.users (id uuid primary key);
 CREATE OR REPLACE FUNCTION auth.uid()
@@ -25,3 +30,4 @@ INSERT INTO auth.users (id) VALUES
 CREATE TABLE public.leads (
   slug text NOT NULL DEFAULT substr(replace(gen_random_uuid()::text, '-', ''), 1, 10)
 );
+

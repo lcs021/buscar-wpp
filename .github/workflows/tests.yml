@@ -16,7 +16,7 @@ jobs:
       - name: Testes
         run: deno test tests/
       - name: Lint
-        run: deno lint tests/ web/ supabase/functions/buscar-empresas/
+        run: deno lint tests/ web/ supabase/functions/
   postgres-rate-limit:
     runs-on: ubuntu-latest
     services:
@@ -46,3 +46,6 @@ jobs:
         run: |
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114000000_limite_buscas.sql
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-rate-limit.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114100000_operacao_agendada.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-orquestrador.sql
+

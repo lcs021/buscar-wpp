@@ -2,3 +2,8 @@
 # A função confere o login sozinha, então a verificação automática de JWT fica desligada.
 [functions.buscar-empresas]
 verify_jwt = false
+
+# Auth is verified with ORQUESTRADOR_CRON_SECRET inside the Edge Function.
+[functions.orquestrador]
+verify_jwt = false
+
