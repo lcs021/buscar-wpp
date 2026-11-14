@@ -98,7 +98,7 @@ export function renderOperacao(esc) {
   </div>`;
 }
 
-function timeInSaoPaulo(localValue) {
+export function timeInSaoPaulo(localValue) {
   if (!localValue) return new Date().toISOString();
   const iso = new Date(`${localValue}:00-03:00`);
   if (!Number.isFinite(iso.getTime())) throw new Error("Data e hora inválidas.");
