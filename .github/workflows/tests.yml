@@ -50,3 +50,5 @@ jobs:
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-orquestrador.sql
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114200000_demo_view_dedup.sql
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-demo-view-dedup.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114210000_site_evidence.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-site-evidence.sql

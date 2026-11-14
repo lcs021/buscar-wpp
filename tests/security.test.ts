@@ -1,6 +1,6 @@
 import { csvCell } from "../web/csv.js";
 import { safeHttpUrl } from "../web/url.js";
-import { montarLead } from "../web/shared.js";
+import { leadParaGravacao, lerCSV, montarLead } from "../web/shared.js";
 import { renderDemo } from "../web/demo-render.js";
 import { renderSite } from "../web/site-render.js";
 import {
@@ -56,6 +56,41 @@ Deno.test("CSV neutraliza fórmulas e preserva escaping de aspas", () => {
   assertEquals(csvCell("\u0000=1+1"), `"'\u0000=1+1"`);
   assertEquals(csvCell('texto "normal"'), `"texto ""normal"""`);
   assertEquals(csvCell("-3"), `"'-3"`);
+});
+
+Deno.test("manual e CSV ficam não verificados e não entram como qualificados", () => {
+  const manual = montarLead({ nome: "Empresa Fictícia", telefone: "11900000000" }, { nota_minima: 4.5, avaliacoes_minimas: 20 });
+  assertEquals(manual.site_evidence_status, "unverified");
+  assertEquals(manual.site_evidence_source, "manual");
+  assertEquals(manual.site_evidence_at, null);
+  assertEquals(manual.qualificado, false);
+
+  const [csvRow] = lerCSV("Empresa;Telefone;Site\nEmpresa Fictícia;11900000000;https://synthetic.example");
+  const imported = montarLead(csvRow, { nota_minima: 4.5, avaliacoes_minimas: 20 });
+  assertEquals(imported.site_evidence_status, "unverified");
+  assertEquals(imported.site_evidence_source, "csv");
+  assertEquals(imported.site_evidence_at, null);
+  assertEquals(imported.qualificado, false);
+});
+
+Deno.test("reimportação não envia os campos operacionais do CRM no upsert", () => {
+  const write = leadParaGravacao({
+    nome: "Empresa Fictícia",
+    site_evidence_status: "unverified",
+    status: "interessado",
+    favorito: true,
+    observacoes: "nota privada",
+    mensagem: "texto editado",
+    demo_publicada: true,
+    visualizacoes: 9,
+    ultima_visualizacao: "2026-01-02T03:04:05Z",
+    enviado_em: "2026-01-01T03:04:05Z",
+  });
+  assertEquals(write.nome, "Empresa Fictícia");
+  assertEquals(write.site_evidence_status, "unverified");
+  for (const field of ["status", "favorito", "observacoes", "mensagem", "demo_publicada", "visualizacoes", "ultima_visualizacao", "enviado_em"]) {
+    assertEquals(Object.hasOwn(write, field), false, `${field} must be left to the existing CRM row`);
+  }
 });
 
 Deno.test("busca bloqueada pela cota não chama Google Places", async () => {

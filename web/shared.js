@@ -214,6 +214,10 @@ export function qualificarLocal(l, perfil = {}) {
     whatsapp: "o site da ficha é só o WhatsApp", link_agregador: "o site da ficha é só um link de pedido/agenda/cardápio" }[l.status_site] || "não tem site";
   return { qualificado: true, motivo: `Bom negócio (${prova}) e ${falha}.` };
 }
+const CAMPOS_CRM = new Set(["status", "favorito", "observacoes", "mensagem", "demo_publicada", "visualizacoes", "ultima_visualizacao", "enviado_em"]);
+export function leadParaGravacao(l) {
+  return Object.fromEntries(Object.entries(l).filter(([k]) => !CAMPOS_CRM.has(k)));
+}
 // Monta a linha do banco a partir dos campos digitados/importados
 export function montarLead(c, perfil = {}) {
   const nota = c.nota === "" || c.nota == null ? null : Math.round(parseFloat(String(c.nota).replace(",", ".")) * 10) / 10;

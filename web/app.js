@@ -1,5 +1,5 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, renderSite, nomeCurto, montarLead, lerCSV, leadParaGravacao, ESTILOS, mensagemEstilo } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
 import { csvCell } from "./csv.js";
 import { sanitizeLeadUrls } from "./url.js";
@@ -44,6 +44,18 @@ const quando = (iso) => {
   if (s < 60) return "agora"; if (s < 3600) return `há ${Math.floor(s / 60)} min`;
   if (s < 86400) return `há ${Math.floor(s / 3600)} h`; return new Date(iso).toLocaleDateString("pt-BR");
 };
+const dataCompleta = (iso) => iso ? new Date(iso).toLocaleString("pt-BR") : "sem data de verificação";
+function evidenciaSite(l) {
+  const fonte = { google_places: "Google Places API (New)", manual: "Cadastro manual", csv: "Importação CSV", human_review: "Revisão humana", legacy: "Registro anterior à trilha de evidência" }[l.site_evidence_source] || "Origem não registrada";
+  const estado = {
+    url_not_reported: "esta consulta não retornou URL de site; isso não confirma ausência de site",
+    url_reported: "esta consulta retornou uma URL de site; o conteúdo não foi validado",
+    confirmed_no_site: "site próprio confirmado como ausente por revisão humana",
+    confirmed_site: "site próprio confirmado por revisão humana",
+    unverified: "presença de site ainda não verificada",
+  }[l.site_evidence_status] || "presença de site sem classificação de evidência";
+  return `Fonte: ${fonte}. ${estado}. ${dataCompleta(l.site_evidence_at)}.`;
+}
 const leadPorId = (id) => st.leads.find((l) => l.id === id);
 const msgAuto = (l) => mensagemEstilo(st.estilo[l.id] || "padrao", l, st.perfil, linkSite(l));
 const msgDe = (l) => l.mensagem ?? msgAuto(l);
@@ -56,7 +68,13 @@ const linkWhats = (l, texto) => `https://wa.me/${numeroWhats(l)}?text=${encodeUR
 const filaLista = () => st.leads.filter((l) => l.qualificado && l.status === "novo" && numeroWhats(l))
   .sort((a, b) => (b.avaliacoes ?? 0) - (a.avaliacoes ?? 0));
 
-function seloFalha(l) { return `<span class="selo ${COR_FALHA[l.status_site] || "c"}">${esc(FALHAS[l.status_site] || l.status_site)}</span>`; }
+function seloFalha(l) {
+  const texto = l.site_evidence_status === "confirmed_no_site" ? "Sem site (confirmado)"
+    : l.site_evidence_status === "url_not_reported" ? "Sem URL na ficha"
+    : l.site_evidence_status === "unverified" || !l.site_evidence_status ? "Não verificado"
+    : FALHAS[l.status_site] || l.status_site;
+  return `<span class="selo ${COR_FALHA[l.status_site] || "c"}">${esc(texto)}</span>`;
+}
 function seloStatus(l) { return `<span class="selo ${COR_STATUS[l.status] || "c"}">${esc(STATUS[l.status] || l.status)}</span>`; }
 
 // ------------------------------------------------------------------ dados
@@ -81,6 +99,31 @@ async function atualizar(id, dados, msg) {
     if (msg) toast(msg);
     render();
     return novo;
+  } catch (e) { toast(e.message, true); }
+}
+
+async function confirmarPresencaDigital(l, temSite) {
+  const texto = temSite
+    ? "Confirma que, após conferir, encontrou um site próprio para esta empresa?"
+    : "Confirma que, após conferir, não encontrou site próprio? A ficha do Google sozinha não prova ausência.";
+  if (!confirm(texto)) return;
+  try {
+    await sb.db("rpc/confirmar_presenca_digital", {
+      method: "POST",
+      body: { p_lead_id: l.id, p_tem_site: temSite },
+    });
+    if (temSite) {
+      await atualizar(l.id, { status: "descartado", demo_publicada: false }, "Site confirmado; lead removido da fila.");
+      return;
+    }
+    const [novo] = await sb.db(`leads?id=eq.${l.id}&select=*`);
+    if (novo) {
+      const i = st.leads.findIndex((x) => x.id === l.id);
+      if (i >= 0) st.leads[i] = novo;
+      if (st.busca) st.busca.leads = st.busca.leads.map((x) => x.id === l.id ? novo : x);
+    }
+    toast("Ausência de site confirmada com data do servidor.");
+    render();
   } catch (e) { toast(e.message, true); }
 }
 
@@ -209,7 +252,7 @@ function telaBuscar() {
       <button class="btn p g" type="submit"${st.buscando ? " disabled" : ""}>${st.buscando ? '<span class="giro"></span> PESQUISANDO…' : `${I.busca} PESQUISAR EMPRESAS`}</button>
     </div>
     <div class="chips" style="margin-top:12px">${SUGESTOES.map((s) => `<button type="button" class="chip${f.tipo === s ? " on" : ""}" data-tipo="${esc(s)}">${esc(s)}</button>`).join("")}</div>
-    <p class="sub" style="margin-top:12px">Filtro atual: nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações, sem site próprio. Ajuste em Configurações.</p>
+    <p class="sub" style="margin-top:12px">Filtro atual: nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações, sem URL própria informada na ficha ou com rede social. URL ausente não confirma que a empresa não tenha site. Ajuste em Configurações.</p>
   </form>
   ${st.erroBusca ? `<div class="aviso erro" style="margin-top:14px">${esc(st.erroBusca)}${/GOOGLE_PLACES_API_KEY|Google recusou/.test(st.erroBusca) ? `<br>Sem a chave do Google, use <a href="#adicionar">Adicionar empresas</a>: cadastro manual ou importação de planilha.` : ""}</div>` : ""}
   ${r ? `<div style="margin-top:18px">
@@ -248,7 +291,7 @@ function telaAdicionar() {
 }
 
 async function gravarLeads(linhas) {
-  const corpo = linhas.map((l) => ({ ...l, user_id: sb.usuario().id }));
+  const corpo = linhas.map((l) => ({ ...leadParaGravacao(l), user_id: sb.usuario().id }));
   const salvos = await sb.db("leads?on_conflict=user_id,place_id", { method: "POST", body: corpo, prefer: "resolution=merge-duplicates,return=representation" });
   for (const l of salvos || []) { const i = st.leads.findIndex((x) => x.id === l.id); i >= 0 ? (st.leads[i] = l) : st.leads.unshift(l); }
   return salvos || [];
@@ -390,6 +433,7 @@ function telaGaveta() {
     <dl class="info">
       <dt>Telefone</dt><dd>${l.telefone ? `<a href="tel:+55${digitos(l.telefone)}">${esc(l.telefone)}</a> ${num ? "· WhatsApp provável" : "· fixo (confirme se tem WhatsApp)"}` : "—"}</dd>
       <dt>Endereço</dt><dd>${esc(l.endereco || "—")}</dd>
+      <dt>Evidência de site</dt><dd>${esc(evidenciaSite(l))}</dd>
       ${l.site ? `<dt>Link na ficha</dt><dd><a href="${esc(l.site)}" target="_blank" rel="noopener">${esc(l.site)}</a></dd>` : ""}
       ${l.instagram ? `<dt>Instagram</dt><dd><a href="${esc(l.instagram)}" target="_blank" rel="noopener">${esc(l.instagram)}</a></dd>` : ""}
       ${l.facebook ? `<dt>Facebook</dt><dd><a href="${esc(l.facebook)}" target="_blank" rel="noopener">${esc(l.facebook)}</a></dd>` : ""}
@@ -421,7 +465,7 @@ function telaGaveta() {
     <div class="bloco"><label>Status</label><select class="in" id="det-status" data-id="${l.id}" style="max-width:260px">${Object.entries(STATUS).map(([k, r]) => `<option value="${k}"${l.status === k ? " selected" : ""}>${r}</option>`).join("")}</select></div>
     <div class="bloco"><label>Observações</label><textarea class="in" id="det-obs" data-dono="${l.id}" rows="4" placeholder="Ex.: falei com o dono, pediu orçamento, retornar sexta…">${esc(l.observacoes)}</textarea>
       <div class="linha-btns" style="margin-top:8px"><button class="btn" data-acao="salvar-obs" data-id="${l.id}">Salvar observação</button>
-      <span class="esp" style="flex:1"></span><button class="btn perigo" data-acao="tem-site" data-id="${l.id}">Já tem site</button><button class="btn perigo" data-acao="excluir" data-id="${l.id}">Excluir lead</button></div></div>
+      <span class="esp" style="flex:1"></span><button class="btn" data-acao="confirm-no-site" data-id="${l.id}">Confirmar ausência de site</button><button class="btn perigo" data-acao="tem-site" data-id="${l.id}">Confirmar que tem site</button><button class="btn perigo" data-acao="excluir" data-id="${l.id}">Excluir lead</button></div></div>
   </div>
   <div class="celular"><iframe data-prev="${l.id}" title="Pré-visualização do site demo"></iframe></div></div>
   </aside>`;
@@ -473,6 +517,7 @@ function csv(qual) {
   const cols = [["Empresa", (l) => nomeCurto(l.nome)], ["Categoria", (l) => l.categoria], ["Nicho", (l) => TEMAS[l.nicho]?.rotulo || l.nicho],
     ["Nota", (l) => notaBR(l.nota)], ["Avaliações", (l) => l.avaliacoes ?? ""], ["Telefone", (l) => l.telefone], ["WhatsApp provável", (l) => (numeroWhats(l) ? "Sim" : "Não")],
     ["Endereço", (l) => l.endereco], ["Bairro", (l) => l.bairro], ["Cidade", (l) => l.cidade], ["Presença digital", (l) => FALHAS[l.status_site]],
+    ["Evidência do site", (l) => l.site_evidence_status], ["Fonte da evidência", (l) => l.site_evidence_source], ["Verificado em", (l) => l.site_evidence_at ? new Date(l.site_evidence_at).toLocaleString("pt-BR") : ""],
     ["Link na ficha", (l) => l.site || l.instagram || l.facebook], ["Qualificada", (l) => (l.qualificado ? "Sim" : "Não")], ["Motivo", (l) => l.motivo],
     ["Status", (l) => STATUS[l.status]], ["Enviado em", (l) => (l.enviado_em ? new Date(l.enviado_em).toLocaleString("pt-BR") : "")],
     ["Visualizações da demo", (l) => l.visualizacoes], ["Link da demo", (l) => linkSite(l)], ["Google Maps", (l) => l.maps_url], ["Observações", (l) => l.observacoes]];
@@ -539,7 +584,8 @@ document.addEventListener("click", async (ev) => {
   if (!l) return;
   if (a === "fila-enviar") { await enviarWhats(l, document.getElementById("fila-msg").value); return; }
   if (a === "fila-descartar") return atualizar(l.id, { status: "descartado" }, "Descartado.");
-  if (a === "tem-site") return atualizar(l.id, { status_site: "com_site", qualificado: false, status: "descartado", demo_publicada: false, motivo: "Fora do filtro: já tem site próprio (marcado por você)." }, "Marcada como 'já tem site' e tirada da fila.");
+  if (a === "confirm-no-site") return confirmarPresencaDigital(l, false);
+  if (a === "tem-site") return confirmarPresencaDigital(l, true);
   if (a === "enviar") return enviarWhats(l, document.getElementById("det-msg").value);
   if (a === "publicar") return atualizar(l.id, { demo_publicada: !l.demo_publicada }, l.demo_publicada ? "Demo fora do ar." : "Demo publicada.");
   if (a === "favorito") return atualizar(l.id, { favorito: !l.favorito });

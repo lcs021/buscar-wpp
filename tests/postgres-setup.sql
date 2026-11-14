@@ -49,5 +49,22 @@ CREATE TABLE public.leads (
   instagram text not null default '',
   facebook text not null default '',
   nota numeric(2,1),
-  avaliacoes integer
+  avaliacoes integer,
+  site text NOT NULL DEFAULT '',
+  status_site text NOT NULL DEFAULT 'sem_site',
+  qualificado boolean NOT NULL DEFAULT false,
+  motivo text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'novo',
+  favorito boolean NOT NULL DEFAULT false,
+  observacoes text NOT NULL DEFAULT '',
+  mensagem text,
+  enviado_em timestamptz
 );
+
+CREATE TABLE public.perfis (
+  user_id uuid PRIMARY KEY,
+  nota_minima numeric(2,1) NOT NULL DEFAULT 4.5,
+  avaliacoes_minimas integer NOT NULL DEFAULT 20
+);
+
+GRANT SELECT, INSERT, UPDATE ON public.leads, public.perfis TO authenticated;

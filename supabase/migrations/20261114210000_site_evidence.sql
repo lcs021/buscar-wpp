@@ -13,6 +13,14 @@ COMMENT ON COLUMN public.leads.site_evidence_source IS
 COMMENT ON COLUMN public.leads.site_evidence_at IS
   'Server observation time for Places evidence or server-confirmed time for human review; null means not verified.';
 
+-- Existing rows have no recorded source/time, so they cannot remain eligible based on the old inference.
+UPDATE public.leads
+   SET qualificado = false,
+       motivo = CASE WHEN qualificado
+         THEN 'Fora do filtro: registro anterior sem evidência de site verificável.'
+         ELSE motivo END
+ WHERE site_evidence_source = 'legacy';
+
 -- The user explicitly confirms after checking; the database supplies the timestamp.
 CREATE OR REPLACE FUNCTION public.confirmar_presenca_digital(p_lead_id uuid, p_tem_site boolean)
 RETURNS void
