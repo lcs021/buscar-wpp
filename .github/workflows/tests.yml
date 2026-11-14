@@ -40,7 +40,7 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-setup.sql
-      - name: Validar migração e limite por usuário
+      - name: Validar migrações e funções PostgreSQL
         env:
           PGPASSWORD: postgres
         run: |
@@ -48,4 +48,5 @@ jobs:
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-rate-limit.sql
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114100000_operacao_agendada.sql
           psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-orquestrador.sql
-
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261114200000_demo_view_dedup.sql
+          psql -h localhost -U postgres -d lead_finder_test -v ON_ERROR_STOP=1 -f tests/postgres-demo-view-dedup.sql
