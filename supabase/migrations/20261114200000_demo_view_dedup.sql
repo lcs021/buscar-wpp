@@ -1,10 +1,9 @@
 -- Count each public demo at most once per UTC day. No visitor identifiers are stored.
+-- Keep one deduplication row per demo, regardless of its age.
 -- p_contar remains in the RPC signature for compatibility with cached clients, but is ignored.
 create table if not exists public.demo_view_counts (
-  lead_id uuid not null references public.leads (id) on delete cascade,
-  view_day date not null,
-  created_at timestamptz not null default now(),
-  primary key (lead_id, view_day)
+  lead_id uuid primary key references public.leads (id) on delete cascade,
+  view_day date not null
 );
 
 alter table public.demo_view_counts enable row level security;
@@ -28,10 +27,12 @@ begin
     return null;
   end if;
 
-  -- Ignore the caller-controlled legacy flag. The database deduplicates by demo and UTC day.
+  -- Ignore the caller-controlled legacy flag. Database state decides whether today is counted.
   insert into public.demo_view_counts (lead_id, view_day)
   values (r.id, (now() at time zone 'UTC')::date)
-  on conflict (lead_id, view_day) do nothing;
+  on conflict (lead_id) do update
+    set view_day = excluded.view_day
+    where public.demo_view_counts.view_day < excluded.view_day;
 
   if found then
     update public.leads
