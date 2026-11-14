@@ -115,15 +115,18 @@ const ROTULO_FALHA: Record<string, string> = {
 export function qualificar(e: { status_site: string; nota: number | null; avaliacoes: number | null; telefone: string; whatsapp: string },
   c: Criterios): { qualificado: boolean; motivo: string } {
   const motivos: string[] = [];
-  if (e.status_site === "com_site") motivos.push("já tem site próprio");
+  if (e.status_site === "com_site") motivos.push("a ficha informa um site próprio");
   if (e.status_site === "link_agregador") motivos.push("a ficha já leva para uma página de pedido/agenda (o dono costuma chamar de site)");
   if ((e.nota ?? 0) < c.nota_minima) motivos.push(`nota ${e.nota ?? "sem nota"} abaixo de ${c.nota_minima}`);
   if ((e.avaliacoes ?? 0) < c.avaliacoes_minimas) motivos.push(`${e.avaliacoes ?? 0} avaliações (mínimo ${c.avaliacoes_minimas})`);
   if (!e.telefone && !e.whatsapp) motivos.push("sem telefone na ficha");
   if (motivos.length) return { qualificado: false, motivo: "Fora do filtro: " + motivos.join("; ") };
+  const motivoPresenca = e.status_site === "sem_site"
+    ? "Google Places não informou uma URL de site nesta consulta; isso não confirma que a empresa não tenha site"
+    : ROTULO_FALHA[e.status_site];
   return {
     qualificado: true,
-    motivo: `Bom negócio (nota ${String(e.nota).replace(".", ",")} com ${e.avaliacoes} avaliações) e ${ROTULO_FALHA[e.status_site]}.`,
+    motivo: `Bom negócio (nota ${String(e.nota).replace(".", ",")} com ${e.avaliacoes} avaliações); ${motivoPresenca}.`,
   };
 }
 
@@ -152,6 +155,9 @@ export function normalizar(p: any, termo: string, tipoBuscado: string, c: Criter
     instagram: site.instagram,
     facebook: site.facebook,
     status_site: site.status_site,
+    site_evidence_status: p.websiteUri ? "url_reported" : "url_not_reported",
+    site_evidence_source: "google_places",
+    site_evidence_at: new Date().toISOString(),
     nota,
     avaliacoes,
     busca_termo: termo,
@@ -266,7 +272,7 @@ export async function usuarioAtual(ctx: Ctx): Promise<string> {
 }
 
 const CAMPOS_BUSCA = ["place_id", "nome", "categoria", "nicho", "telefone", "celular", "whatsapp", "endereco", "bairro",
-  "cidade", "uf", "maps_url", "site", "instagram", "facebook", "status_site", "nota", "avaliacoes", "qualificado",
+  "cidade", "uf", "maps_url", "site", "instagram", "facebook", "status_site", "site_evidence_status", "site_evidence_source", "site_evidence_at", "nota", "avaliacoes", "qualificado",
   "motivo", "busca_termo"];
 
 // deno-lint-ignore no-explicit-any
