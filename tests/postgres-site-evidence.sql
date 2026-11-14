@@ -8,6 +8,10 @@ BEGIN
   END IF;
 END $$;
 
+-- Match the auth.uid() privileges exposed to authenticated users by Supabase.
+GRANT USAGE ON SCHEMA auth TO authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', false);
 INSERT INTO public.perfis (user_id, nota_minima, avaliacoes_minimas)
