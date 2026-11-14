@@ -113,7 +113,7 @@ export const milhar = (n) => Number(n || 0).toLocaleString("pt-BR");
 
 export function numeroWhats(l) {
   if (l.whatsapp && /^\d{10,15}$/.test(l.whatsapp)) return l.whatsapp.startsWith("55") ? l.whatsapp : "55" + l.whatsapp;
-  if (l.celular) { let d = digitos(l.telefone); if (d.length === 13 && d.startsWith("55")) return d; return "55" + d.replace(/^0+/, ""); }
+  if (l.celular) { const d = digitos(l.telefone); if (d.length === 13 && d.startsWith("55")) return d; return "55" + d.replace(/^0+/, ""); }
   return "";
 }
 export const linkMaps = (l) => safeHttpUrl(l.maps_url) || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${l.nome}, ${l.endereco}`);

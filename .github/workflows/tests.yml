@@ -16,7 +16,7 @@ jobs:
       - name: Testes
         run: deno test tests/
       - name: Lint
-        run: deno lint tests/ web/url.js web/csv.js supabase/functions/buscar-empresas/
+        run: deno lint tests/ web/ supabase/functions/buscar-empresas/
   postgres-rate-limit:
     runs-on: ubuntu-latest
     services:

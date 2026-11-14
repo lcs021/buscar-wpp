@@ -1,5 +1,5 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
 import { csvCell } from "./csv.js";
 import { sanitizeLeadUrls } from "./url.js";
@@ -84,7 +84,7 @@ async function atualizar(id, dados, msg) {
 
 // Enviar: abre o WhatsApp na hora (precisa ser direto no clique) e depois marca como enviado + publica a demo.
 function enviarWhats(l, texto) {
-  window.open(linkWhats(l, texto), "_blank", "noopener");
+  globalThis.open(linkWhats(l, texto), "_blank", "noopener");
   const dados = { status: "enviado", enviado_em: new Date().toISOString(), demo_publicada: true };
   if (texto !== mensagemEstilo("padrao", l, st.perfil, linkSite(l))) dados.mensagem = texto;
   return atualizar(l.id, dados, "Marcado como enviado. Confira o envio no WhatsApp.");
@@ -542,7 +542,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "copiar-proposta" || a === "enviar-proposta") {
     const texto = mensagemEstilo("proposta", l, st.perfil, linkSite(l));
     if (a === "copiar-proposta") { navigator.clipboard?.writeText(texto).then(() => toast("Proposta copiada."), () => toast("Não deu para copiar.", true)); return; }
-    window.open(linkWhats(l, texto), "_blank", "noopener");
+    globalThis.open(linkWhats(l, texto), "_blank", "noopener");
     const dados = { demo_publicada: true };
     if (["novo", "enviado"].includes(l.status)) dados.status = "respondeu";
     return atualizar(l.id, dados, "Proposta aberta no WhatsApp.");
@@ -613,7 +613,7 @@ document.addEventListener("submit", async (ev) => {
   }
 });
 document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && st.aberto) { st.aberto = null; render(); } });
-window.addEventListener("hashchange", () => { st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render(); });
+globalThis.addEventListener("hashchange", () => { st.pagina = (location.hash || "#dashboard").slice(1); st.menu = false; st.aberto = null; render(); });
 
 async function importarCSV(arquivo) {
   try {

@@ -2,7 +2,7 @@
 //   a abertura é uma cena presa na tela que avança e volta com a rolagem (três fotos, três legendas, um quadro final),
 //   e a página assenta no site de verdade logo abaixo (as mesmas seções por ramo do demo-render.js).
 //   Roda igual no celular e no computador. Nada é inventado: nota, avaliações, endereço e telefone vêm da ficha pública.
-import { svg, esc, notaBR, milhar } from "./shared.js";
+import { esc, notaBR, milhar } from "./shared.js";
 import { sanitizeLeadUrls } from "./url.js";
 import { _pecas } from "./demo-render.js";
 
