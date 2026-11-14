@@ -8,6 +8,7 @@
 body{background:var(--bg);color:var(--t);font:14px/1.45 Inter,system-ui,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--v);text-decoration:none}a:hover{text-decoration:underline}
 button,input,select,textarea{font:inherit;color:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--v);outline-offset:3px}
 .carregando{padding:40px;color:var(--t2)}
 [hidden]{display:none!important}
 
