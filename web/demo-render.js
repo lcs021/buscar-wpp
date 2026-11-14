@@ -388,7 +388,8 @@ function dados(l) {
   const espelho = Math.floor(h / 97) % 2 === 1;
   const r = RECEITAS[l.nicho] || RECEITAS.generico;
   const nome = nomeCurto(l.nome);
-  const num = numeroWhats(l);
+  // A mobile-number format does not prove WhatsApp is available; use only an explicit listing URL.
+  const num = l.whatsapp ? numeroWhats(l) : "";
   const tel = digitos(l.telefone).replace(/^0+/, "");
   const contato = num ? { url: `https://wa.me/${num}`, ic: "zap", rot: "Chamar no WhatsApp", canal: "WhatsApp" }
     : l.telefone ? { url: `tel:+55${tel}`, ic: "fone", rot: `Ligar ${l.telefone}`, canal: "telefone" }
@@ -937,11 +938,11 @@ export function renderDemo(l, { preview = false } = {}) {
 <style>${css(x)}</style>
 <script type="application/ld+json">${jsonLD(x, l)}</script></head>
 <body class="seg-${esc(l.nicho || "generico")}">
-<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial.${preview ? " (pré-visualização)" : ""}</div>
+<div class="demo-aviso"><b>Demonstração</b> criada para ${esc(x.nome)}. Não é o site oficial. Textos promocionais e serviços são exemplos; confirme os dados antes de usar.${preview ? " (pré-visualização)" : ""}</div>
 ${montar(x, l)}
 <script>${SCRIPT}</script>
 </body></html>`;
 }
 
 // peças internas reaproveitadas pelo site cinematográfico (site-render.js)
-export const _pecas = { dados, img, foto, botao, estrelas, montar, css, SCRIPT, jsonLD };
+export function getDemoRendererPieces() { return { dados, img, foto, botao, estrelas, montar, css, SCRIPT, jsonLD }; }
