@@ -200,16 +200,19 @@ function telaBuscar() {
       <div class="campo"><label>Cidade</label><input class="in" name="cidade" placeholder="Ex.: Nova Iguaçu" value="${esc(f.cidade)}"></div>
       <div class="campo"><label>Estado</label><select class="in" name="uf"><option value="">UF</option>${UFS.map((u) => `<option${u === f.uf ? " selected" : ""}>${u}</option>`).join("")}</select></div>
       <div class="campo"><label>Bairro (opcional)</label><input class="in" name="bairro" placeholder="Ex.: Centro" value="${esc(f.bairro)}"></div>
-      <div class="campo"><label>Quantidade</label><select class="in" name="quantidade">${[10, 20, 40, 60].map((n) => `<option${n == f.quantidade ? " selected" : ""}>${n}</option>`).join("")}</select></div>
-      <button class="btn p g" type="submit"${st.buscando ? " disabled" : ""}>${st.buscando ? '<span class="giro"></span> PESQUISANDO…' : `${I.busca} PESQUISAR EMPRESAS`}</button>
+      <div class="campo"><label>Meta de empresas sem site</label><select class="in" name="quantidade">${[10, 20, 40, 60].map((n) => `<option${n == f.quantidade ? " selected" : ""}>${n}</option>`).join("")}</select></div>
+      <button class="btn p g" type="submit"${st.buscando ? " disabled" : ""}>${st.buscando ? '<span class="giro"></span> PESQUISANDO…' : `${I.busca} BUSCAR E ADICIONAR EMPRESAS`}</button>
     </div>
     <div class="chips" style="margin-top:12px">${SUGESTOES.map((s) => `<button type="button" class="chip${f.tipo === s ? " on" : ""}" data-tipo="${esc(s)}">${esc(s)}</button>`).join("")}</div>
-    <p class="sub" style="margin-top:12px">Filtro atual: nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações, sem site próprio. Ajuste em Configurações.</p>
+    <p class="sub" style="margin-top:12px">A busca analisa até 60 fichas e adiciona as empresas em funcionamento, sem site próprio nem link de pedido/agenda, com telefone, nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações. A quantidade é uma meta e pode não ser atingida. Ajuste os filtros em Configurações.</p>
+    <p class="sub">As novas empresas entram no sistema com demo por ramo e mensagem personalizada, conforme seus planos e configurações. Revise em <a href="#fila">Fila de envio</a>; a demo vai ao ar ao enviar ou publicar. O envio do WhatsApp continua manual.</p>
   </form>
   ${st.erroBusca ? `<div class="aviso erro" style="margin-top:14px">${esc(st.erroBusca)}${/GOOGLE_PLACES_API_KEY|Google recusou/.test(st.erroBusca) ? `<br>Sem a chave do Google, use <a href="#adicionar">Adicionar empresas</a>: cadastro manual ou importação de planilha.` : ""}</div>` : ""}
   ${r ? `<div style="margin-top:18px">
-    <div class="ferr"><span><b>${r.total}</b> encontradas · <b>${r.qualificados}</b> qualificadas · <b>${r.novos}</b> novas</span><span class="esp"></span>
+    <div class="ferr"><span><b>${r.analisadas ?? r.total}</b> fichas analisadas · <b>${r.qualificados}</b> qualificadas · <b>${r.novos}</b> novas</span><span class="esp"></span>
       ${r.qualificados ? `<a class="btn p" href="#fila">Ir para a fila de envio →</a>` : ""}</div>
+    ${r.fora_filtro != null ? `<p class="sub">${r.fora_filtro} fora do filtro · ${r.ignoradas} descartadas anteriormente e preservadas. Empresas já cadastradas são atualizadas sem alterar mensagens editadas nem o andamento do contato.</p>` : ""}
+    ${r.qualificados < r.meta ? `<div class="aviso info">A meta de ${r.meta} empresas não foi atingida. Experimente outro ramo, bairro ou cidade.</div>` : ""}
     ${tabela(r.leads)}
   </div>` : ""}`;
 }
@@ -479,6 +482,7 @@ function csv(qual) {
 
 async function buscar(ev) {
   ev.preventDefault();
+  if (st.buscando) return;
   const f = Object.fromEntries(new FormData(ev.target));
   st.form = { ...st.form, ...f };
   if (!f.tipo.trim() || !f.cidade.trim() || !f.uf) { st.erroBusca = "Preencha tipo de empresa, cidade e estado."; return render(); }
@@ -487,6 +491,7 @@ async function buscar(ev) {
     const r = await sb.funcao("buscar-empresas", { ...f, quantidade: Number(f.quantidade) });
     st.busca = r;
     for (const l of r.leads) { const i = st.leads.findIndex((x) => x.id === l.id); i >= 0 ? (st.leads[i] = l) : st.leads.unshift(l); }
+    // A resposta inclui empresas que saíram do filtro; refletimos isso na fila imediatamente.
     st.buscas = await sb.db("buscas?select=*&order=created_at.desc&limit=8");
     toast(`${r.total} empresas · ${r.qualificados} qualificadas`);
   } catch (e) { st.erroBusca = e.message; }

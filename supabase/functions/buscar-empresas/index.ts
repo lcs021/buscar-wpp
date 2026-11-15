@@ -36,14 +36,22 @@ export type Site = { status_site: string; site: string; instagram: string; faceb
 export function classificarSite(url?: string | null): Site {
   const r: Site = { status_site: "sem_site", site: url || "", instagram: "", facebook: "", whatsapp: "" };
   if (!url) return r;
-  const u = url.toLowerCase();
-  if (u.includes("instagram.com") || u.includes("instagr.am")) return { ...r, status_site: "instagram", instagram: url, site: "" };
-  if (u.includes("facebook.com") || u.includes("fb.com") || u.includes("fb.me")) return { ...r, status_site: "facebook", facebook: url, site: "" };
-  if (u.includes("wa.me") || u.includes("whatsapp.com") || u.includes("wa.link")) {
-    const m = url.match(/wa\.me\/(\d{10,15})/) || url.match(/phone=(\d{10,15})/);
-    return { ...r, status_site: "whatsapp", whatsapp: m ? m[1] : "", site: "" };
+  // Compare o domínio real: um site com /instagram.com no caminho continua sendo site próprio.
+  let u: URL;
+  try { u = new URL(url); } catch { return { ...r, status_site: "com_site" }; }
+  if (!["http:", "https:"].includes(u.protocol)) return { ...r, status_site: "com_site" };
+  const host = u.hostname.toLowerCase();
+  const dominio = (d: string) => host === d || host.endsWith(`.${d}`);
+  if (["instagram.com", "instagr.am"].some(dominio)) return { ...r, status_site: "instagram", instagram: url, site: "" };
+  if (["facebook.com", "fb.com", "fb.me"].some(dominio)) return { ...r, status_site: "facebook", facebook: url, site: "" };
+  if (["wa.me", "whatsapp.com", "wa.link"].some(dominio)) {
+    const numero = dominio("wa.me") ? u.pathname.slice(1) : u.searchParams.get("phone") || "";
+    return { ...r, status_site: "whatsapp", whatsapp: /^\d{10,15}$/.test(numero) ? numero : "", site: "" };
   }
-  if (AGREGADORES.some((a) => u.includes(a))) return { ...r, status_site: "link_agregador" };
+  // Agregadores conhecidos e subdomínios de fornecedores de pedido/agendamento.
+  if (AGREGADORES.some((a) => a.includes(".") ? dominio(a) : host.split(".").includes(a))) {
+    return { ...r, status_site: "link_agregador" };
+  }
   return { ...r, status_site: "com_site" };
 }
 
@@ -97,7 +105,7 @@ const ROTULO_FALHA: Record<string, string> = {
 export function qualificar(e: { status_site: string; nota: number | null; avaliacoes: number | null; telefone: string; whatsapp: string },
   c: Criterios): { qualificado: boolean; motivo: string } {
   const motivos: string[] = [];
-  if (e.status_site === "com_site") motivos.push("já tem site próprio");
+  if (!["sem_site", "instagram", "facebook", "whatsapp", "link_agregador"].includes(e.status_site)) motivos.push("já tem site próprio ou presença digital incerta");
   if (e.status_site === "link_agregador") motivos.push("a ficha já leva para uma página de pedido/agenda (o dono costuma chamar de site)");
   if ((e.nota ?? 0) < c.nota_minima) motivos.push(`nota ${e.nota ?? "sem nota"} abaixo de ${c.nota_minima}`);
   if ((e.avaliacoes ?? 0) < c.avaliacoes_minimas) motivos.push(`${e.avaliacoes ?? 0} avaliações (mínimo ${c.avaliacoes_minimas})`);
@@ -172,19 +180,23 @@ export async function pesquisarPlaces(apiKey: string, tipo: string, cidade: stri
   // deno-lint-ignore no-explicit-any
   const achados = new Map<string, any>();
   let token: string | undefined;
-  while (achados.size < qtd) {
+  let paginas = 0;
+  const tokens = new Set<string>();
+  while ([...achados.values()].filter((e) => e.qualificado && e.status_negocio === "OPERATIONAL").length < qtd && paginas < 3) {
     // deno-lint-ignore no-explicit-any
-    const corpo: any = { textQuery: termo, languageCode: "pt-BR", regionCode: "BR", pageSize: Math.min(20, qtd - achados.size) };
+    const corpo: any = { textQuery: termo, languageCode: "pt-BR", regionCode: "BR", pageSize: 20 };
     if (token) corpo.pageToken = token;
     const dados = await postPlaces(apiKey, corpo);
+    paginas++;
     const lista = dados.places || [];
     for (const p of lista) if (p.id && !achados.has(p.id)) achados.set(p.id, normalizar(p, termo, tipo, c));
     token = dados.nextPageToken;
-    if (!token || lista.length === 0) break;
+    if (!token || lista.length === 0 || tokens.has(token) || paginas >= 3) break;
+    tokens.add(token);
     await espera(1500); // o token da próxima página leva um instante para valer
   }
-  const empresas = [...achados.values()].filter((e) => e.status_negocio !== "CLOSED_PERMANENTLY").slice(0, qtd);
-  return { termo, empresas };
+  const empresas = [...achados.values()];
+  return { termo, empresas, quantidade: qtd, analisadas: empresas.length };
 }
 
 // ------------------------------------------------------------------ Supabase (REST com o token do próprio usuário: o RLS vale)
@@ -228,28 +240,54 @@ export async function executarBusca(ctx: Ctx, apiKey: string, corpo: any, espera
     avaliacoes_minimas: Number(perfis?.[0]?.avaliacoes_minimas ?? 20),
   };
 
-  const { termo, empresas } = await pesquisarPlaces(apiKey, tipo, cidade, uf, bairro, Number(corpo?.quantidade) || 20, c, espera);
+  const { termo, empresas, quantidade, analisadas } = await pesquisarPlaces(apiKey, tipo, cidade, uf, bairro, Number(corpo?.quantidade) || 20, c, espera);
 
   let novos = 0;
+  let ignoradas = 0;
   // deno-lint-ignore no-explicit-any
-  let gravados: any[] = [];
+  const gravados: any[] = [];
   if (empresas.length) {
     const ids = empresas.map((e) => `"${e.place_id.replace(/"/g, "")}"`).join(",");
-    const existentes = await rest(ctx, `leads?select=place_id&user_id=eq.${userId}&place_id=in.(${encodeURIComponent(ids)})`);
-    const ja = new Set((existentes || []).map((x: { place_id: string }) => x.place_id));
-    novos = empresas.filter((e) => !ja.has(e.place_id)).length;
-    const linhas = empresas.map((e) => {
+    const existentes = await rest(ctx, `leads?select=place_id,status,status_site&user_id=eq.${userId}&place_id=in.(${encodeURIComponent(ids)})`);
+    // deno-lint-ignore no-explicit-any
+    const ja = new Map<string, any>((existentes || []).map((x: any) => [x.place_id, x]));
+    const novas = [];
+    for (const e of empresas) {
+      const anterior = ja.get(e.place_id);
+      // Exclusões manuais não voltam à fila nem têm a classificação sobrescrita.
+      if (anterior && (anterior.status === "descartado" || ["com_site", "link_agregador"].includes(anterior.status_site))) {
+        ignoradas++;
+        continue;
+      }
+      const apta = e.qualificado && e.status_negocio === "OPERATIONAL";
+      // Atualiza a presença digital dos já cadastrados, inclusive para retirar da fila quem ganhou site.
+      if (!apta && !anterior) continue;
       // deno-lint-ignore no-explicit-any
-      const l: any = { user_id: userId };
-      for (const k of CAMPOS_BUSCA) l[k] = (e as Record<string, unknown>)[k];
-      return l;
-    });
-    // merge-duplicates atualiza só estes campos: status, observações e mensagens que você já editou ficam intactos
-    gravados = await rest(ctx, "leads?on_conflict=user_id,place_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify(linhas),
-    }) || [];
+      const linha: any = {};
+      for (const k of CAMPOS_BUSCA) linha[k] = (e as Record<string, unknown>)[k];
+      if (!apta) {
+        linha.qualificado = false;
+        linha.demo_publicada = false;
+        if (e.status_negocio !== "OPERATIONAL") linha.motivo = "Fora do filtro: negócio fechado ou funcionamento não confirmado.";
+      }
+      if (anterior) {
+        const atualizados = await rest(ctx, `leads?user_id=eq.${userId}&place_id=eq.${encodeURIComponent(e.place_id)}&status=neq.descartado&status_site=not.in.(com_site,link_agregador)`, {
+          method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(linha),
+        });
+        gravados.push(...(atualizados || []));
+      } else if (novas.length + gravados.filter((g) => g.qualificado).length < quantidade) {
+        novas.push({ ...linha, user_id: userId });
+      }
+    }
+    if (novas.length) {
+      // Ignore mantém status, demos e mensagens intactos mesmo com duas buscas simultâneas.
+      const inseridos = await rest(ctx, "leads?on_conflict=user_id,place_id", {
+        method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+        body: JSON.stringify(novas),
+      }) || [];
+      novos = inseridos.length;
+      gravados.push(...inseridos);
+    }
   }
   const qualificados = gravados.filter((g) => g.qualificado).length;
   await rest(ctx, "buscas", {
@@ -258,7 +296,9 @@ export async function executarBusca(ctx: Ctx, apiKey: string, corpo: any, espera
     body: JSON.stringify({ user_id: userId, termo, resultados: gravados.length, novos, qualificados }),
   });
   gravados.sort((a, b) => Number(b.qualificado) - Number(a.qualificado) || (b.avaliacoes ?? 0) - (a.avaliacoes ?? 0));
-  return { termo, total: gravados.length, novos, qualificados, leads: gravados };
+  return { termo, total: gravados.length, novos, qualificados, analisadas, ignoradas,
+    fora_filtro: empresas.filter((e) => !e.qualificado || e.status_negocio !== "OPERATIONAL").length,
+    meta: quantidade, leads: gravados };
 }
 
 // ------------------------------------------------------------------ servidor

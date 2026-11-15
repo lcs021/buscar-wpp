@@ -3,7 +3,7 @@
 Sistema na nuvem para prospectar comércios sem site:
 
 1. **Busca empresas** no Google (Places API oficial) por tipo, cidade e bairro.
-2. **Qualifica** sozinho: nota alta + muitas avaliações + falha na presença digital (sem site, só Instagram/Facebook/WhatsApp, só link de iFood/cardápio/agenda).
+2. **Qualifica** sozinho: nota alta + muitas avaliações + falha na presença digital (sem site ou apenas Instagram/Facebook/WhatsApp; links de pedido, cardápio e agenda ficam fora).
 3. **Monta um site demo** para cada empresa, com o tema do nicho (barbearia, oficina, pizzaria, pet, dentista…), com link público e faixa "DEMONSTRAÇÃO".
 4. **Fila de envio no WhatsApp**: a mensagem personalizada já vem com o link do site. Um clique abre o WhatsApp com tudo pronto, você aperta enviar, e o sistema marca como enviado e pula para a próxima empresa.
 5. **Avisa quem abriu o site demo**, com quantas vezes e quando. É a hora certa de chamar de novo.
@@ -133,3 +133,20 @@ supabase functions deploy buscar-empresas --no-verify-jwt
 - **"O Google recusou a chave"**: confira o segredo `GOOGLE_PLACES_API_KEY` e se ativou a *Places API (New)*, não a antiga.
 - **"permission denied for table"**: rode o SQL do passo 2 de novo (ele libera as tabelas para usuários logados).
 - **Link da demo diz "não está disponível"**: a demo ainda não foi publicada (clique em *Publicar demo*), ou o projeto do Supabase está pausado.
+
+## Busca e cadastro de empresas sem site
+
+O botão **Buscar e adicionar empresas** consulta até três páginas (60 fichas) da Places API para tentar atingir a meta de qualificadas. Só cadastra empresas em funcionamento que passam pelos filtros do perfil, têm telefone e não têm site próprio nem link de pedido/agenda. Ausência de site na ficha não garante ausência de site na internet: confira no Google antes de abordar.
+
+Cada cadastro recebe um slug e usa automaticamente o site demo por ramo e a mensagem existentes no painel. A demo continua em rascunho até publicar ou abrir o envio. Planos e preços continuam apenas nas mensagens; nenhum WhatsApp é enviado sozinho.
+
+Buscas repetidas preservam status de contato, mensagens editadas e demos retiradas do ar. Empresas marcadas como “já tem site” ou descartadas não voltam à fila. Se uma ficha já cadastrada passar a indicar site ou fechamento, sai da qualificação e sua demo é retirada do ar.
+
+A atualização do GitHub Pages **não publica a função do Supabase**. Depois de atualizar o código, publique `buscar-empresas` novamente pelo editor do Supabase (passo 5) ou com `supabase functions deploy buscar-empresas --project-ref koovtpweertxrxeaqujc --no-verify-jwt`. A chave `GOOGLE_PLACES_API_KEY` deve existir nos secrets desse projeto. Sem acesso administrativo ao Supabase não é possível ativar a busca a partir do GitHub. Nunca coloque essa chave em `web/config.js`.
+
+Verificações locais (Node 24+):
+
+```bash
+node --test tests/buscar-empresas.test.mjs
+for arquivo in web/*.js; do node --check "$arquivo"; done
+```
