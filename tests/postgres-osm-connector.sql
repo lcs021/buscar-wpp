@@ -46,9 +46,16 @@ BEGIN
 
   SELECT jsonb_agg(jsonb_build_object(
     'source', 'OpenStreetMap', 'source_element_id', 'node/' || n,
+    'source_url', 'https://www.openstreetmap.org/node/' || n,
+    'name', 'Empresa sintética ' || n, 'category', 'veterinaria',
+    'city', 'Recife', 'uf', 'PE', 'website', NULL,
     'observed_at', '2026-11-15T12:00:00Z', 'license', 'ODbL-1.0',
     'attribution', '© OpenStreetMap contributors',
-    'website_evidence', jsonb_build_object('status', CASE WHEN n = 1 THEN 'not_located_in_sources_consulted' ELSE 'found_in_osm' END)
+    'attribution_url', 'https://www.openstreetmap.org/copyright',
+    'website_evidence', jsonb_build_object(
+      'status', CASE WHEN n = 1 THEN 'not_located_in_sources_consulted' ELSE 'found_in_osm' END,
+      'detail', 'Tag website sintética consultada no OpenStreetMap'
+    )
   )) INTO v_results FROM generate_series(1, 2) n;
   v_response := public.osm_concluir_pesquisa(v_user, v_key, v_results, '2026-11-15T12:00:00Z');
   IF v_response->>'state' <> 'completed' OR jsonb_array_length(v_response->'results') <> 2 THEN
@@ -73,9 +80,13 @@ BEGIN
 
   SELECT jsonb_agg(jsonb_build_object(
     'source', 'OpenStreetMap', 'source_element_id', 'node/' || n,
-    'observed_at', '2026-11-15T12:00:00Z', 'license', 'ODbL-1.0',
+    'source_url', 'https://www.openstreetmap.org/node/' || n,
+    'name', 'Empresa sintética ' || n, 'category', 'veterinaria',
+    'city', 'Recife', 'uf', 'PE', 'website', NULL,
+    'observed_at', now(), 'license', 'ODbL-1.0',
     'attribution', '© OpenStreetMap contributors',
-    'website_evidence', jsonb_build_object('status', 'inconclusive')
+    'attribution_url', 'https://www.openstreetmap.org/copyright',
+    'website_evidence', jsonb_build_object('status', 'inconclusive', 'detail', 'Busca sintética inconclusiva')
   )) INTO v_full FROM generate_series(1, 10) n;
   FOR i IN 3..5 LOOP
     v_key := ('10000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid;
@@ -103,3 +114,4 @@ BEGIN
   IF v_used <> 10 THEN RAISE EXCEPTION 'daily cap should be isolated by tenant'; END IF;
 END $$;
 RESET ROLE;
+

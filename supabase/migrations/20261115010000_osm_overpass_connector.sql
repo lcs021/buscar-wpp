@@ -91,6 +91,8 @@ AS $$
 DECLARE
   v_request public.osm_search_requests%rowtype;
   v_count smallint;
+  v_result jsonb;
+  v_evidence jsonb;
 BEGIN
   IF p_user_id IS NULL OR p_request_key IS NULL OR NOT EXISTS (
     SELECT 1 FROM public.research_reviewers r WHERE r.user_id = p_user_id
@@ -109,6 +111,34 @@ BEGIN
       'observed_at', v_request.observed_at);
   END IF;
   IF v_request.state <> 'reserved' THEN RAISE EXCEPTION 'search reservation is not active' USING ERRCODE = '22023'; END IF;
+
+  FOR v_result IN SELECT value FROM jsonb_array_elements(p_results) AS item(value)
+  LOOP
+    IF jsonb_typeof(v_result) <> 'object'
+       OR EXISTS (SELECT 1 FROM jsonb_object_keys(v_result) AS k(key)
+         WHERE k.key NOT IN ('source','source_element_id','source_url','name','category','city','uf','website',
+           'website_evidence','observed_at','license','attribution','attribution_url'))
+       OR v_result->>'source' <> 'OpenStreetMap'
+       OR v_result->>'license' <> 'ODbL-1.0'
+       OR v_result->>'attribution' <> '© OpenStreetMap contributors'
+       OR v_result->>'attribution_url' <> 'https://www.openstreetmap.org/copyright'
+       OR coalesce(v_result->>'source_element_id','') !~ '^(node|way|relation)/[1-9][0-9]*$'
+       OR coalesce(v_result->>'source_url','') !~ '^https://www\.openstreetmap\.org/(node|way|relation)/[1-9][0-9]*$'
+       OR length(coalesce(v_result->>'name','')) NOT BETWEEN 1 AND 200
+       OR length(coalesce(v_result->>'category','')) > 80
+       OR v_result->>'city' <> v_request.query->>'city'
+       OR v_result->>'uf' <> v_request.query->>'uf'
+       OR (v_result->>'observed_at')::timestamptz <> p_observed_at THEN
+      RAISE EXCEPTION 'OSM result provenance or minimized field set is invalid' USING ERRCODE = '22023';
+    END IF;
+    v_evidence := v_result->'website_evidence';
+    IF jsonb_typeof(v_evidence) <> 'object'
+       OR EXISTS (SELECT 1 FROM jsonb_object_keys(v_evidence) AS k(key) WHERE k.key NOT IN ('status','detail'))
+       OR v_evidence->>'status' NOT IN ('found_in_osm','not_located_in_sources_consulted','inconclusive')
+       OR length(coalesce(v_evidence->>'detail','')) = 0 THEN
+      RAISE EXCEPTION 'OSM website evidence is invalid' USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
 
   v_count := jsonb_array_length(p_results)::smallint;
   UPDATE public.osm_search_daily_usage SET used_count = used_count - v_request.charged_count + v_count
@@ -135,7 +165,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'reviewer authorization required' USING ERRCODE = '42501';
   END IF;
-  IF p_failure_code NOT IN ('source_unavailable','source_timeout','invalid_source_response') THEN
+  IF p_failure_code IS NULL OR p_failure_code NOT IN ('source_unavailable','source_timeout','invalid_source_response') THEN
     RAISE EXCEPTION 'invalid source failure code' USING ERRCODE = '22023';
   END IF;
   SELECT * INTO v_request FROM public.osm_search_requests r
@@ -161,3 +191,4 @@ REVOKE ALL ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.osm_reservar_pesquisa(uuid,uuid,text,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.osm_concluir_pesquisa(uuid,uuid,jsonb,timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) TO service_role;
+
