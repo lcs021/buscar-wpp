@@ -26,6 +26,12 @@ Fontes revisáveis: `extensao/`; ponte e validação: `web/navegador.js`; pacote
 
 ---
 
+### Agendamento da extensão
+
+Em **Buscar empresas → Agendamento da extensão**, configure ramos (um por linha), cidades no formato `Cidade, UF`, meta por execução e início manual, ao abrir o painel ou diariamente em horário local. A busca diária percorre as combinações de ramo e cidade. Ela roda enquanto o computador e o navegador estiverem ligados; os resultados ficam no navegador e são importados quando você abre o painel com uma sessão válida.
+
+Durante a coleta, **Pausar** suspende os próximos passos, **Retomar** continua do ponto salvo e **Cancelar** encerra a execução preservando resultados para revisão. O histórico fica guardado localmente no navegador. Consentimento, CAPTCHA ou mudança inesperada no Maps interrompem a busca. Candidatos seguem pendentes de revisão de site e não entram diretamente na fila. WhatsApp continua manual.
+
 ## Passo a passo (pelo navegador, ~20 minutos)
 
 ### 1. Criar o projeto no Supabase

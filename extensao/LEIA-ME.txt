@@ -1,4 +1,4 @@
-LEAD FINDER — BUSCA GRÁTIS 1.0.0
+LEAD FINDER — BUSCA GRÁTIS 1.1.0
 
 1. Extraia o ZIP para uma pasta no computador e mantenha a pasta.
 2. Abra chrome://extensions ou brave://extensions na barra de endereços.
@@ -17,5 +17,14 @@ Nenhuma senha, cookie ou token de login é entregue à extensão.
 
 Para atualizar: substitua os arquivos da pasta extraída, clique em Recarregar na extensão
 e recarregue o painel. Para remover: Remover na página de extensões.
+
+Agendamento: no painel, abra Buscar empresas > Agendamento da extensão. Configure ramos
+(um por linha), cidades (Cidade, UF por linha), meta e início manual, ao abrir o painel
+ou uma vez por dia. A busca diária usa o horário local escolhido. O computador e o
+navegador precisam ficar ligados; os resultados só são importados ao abrir o painel.
+
+Durante uma pesquisa, use Pausar para interromper e Retomar para continuar. Cancelar
+encerra a coleta e preserva os resultados já encontrados para revisão. O histórico fica
+salvo no navegador atual. Consentimento ou CAPTCHA interrompem a pesquisa sem contorno.
 
 Instruções: https://lcs021.github.io/buscar-wpp/extensao.html

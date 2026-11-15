@@ -1,5 +1,5 @@
 import * as sb from "./sb.js";
-import { chamarExtensao, prepararCandidatos } from "./navegador.js";
+import { chamarExtensao, prepararCandidatos, progressoBusca } from "./navegador.js";
 import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo, qualificarLocal } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
 
@@ -17,6 +17,7 @@ const st = {
   filtro: "qualificados", status: "", texto: "", nicho: "",
   aberto: null,           // id do lead na gaveta
   busca: null, buscando: false, erroBusca: "", navegador: null, fonte: "navegador",
+  automacao: { modo: "manual", ramos: "", cidades: "", quantidade: 20, horario: "09:00", erro: "" }, historicoNavegador: [],
   form: { tipo: "", cidade: "", uf: "", bairro: "", quantidade: 20 },
   filaPos: 0, menu: false,
   estilo: {},             // estilo de mensagem escolhido por lead
@@ -195,12 +196,16 @@ function telaDashboard() {
 function telaBuscar() {
   const f = st.form;
   const r = st.busca;
+  const j = st.navegador;
+  const progresso = progressoBusca(j);
   return `<div class="card" style="margin-bottom:14px"><h3>Busca grátis no seu navegador</h3>
     <p>A extensão abre o Google Maps, pesquisa e importa candidatos com telefone, nota e avaliações dentro dos seus filtros. Os candidatos entram para revisão, com demo e mensagem prontas.</p>
     <div class="linha-btns"><a class="btn p" href="downloads/lead-finder-extensao.zip" download>Baixar extensão grátis</a><a class="btn" href="extensao.html" target="_blank" rel="noopener">Como instalar no Chrome/Brave</a><button class="btn" data-acao="retomar-navegador"${st.buscando ? " disabled" : ""}>Retomar pesquisa da extensão</button></div>
     <p class="sub">Sem chave de API ou cartão. Deixe a aba do Maps aberta; a busca pode levar alguns minutos. Se houver consentimento ou verificação do Google, a pesquisa para e avisa.</p>
-    ${st.navegador ? `<div class="aviso info">${esc(({listando:"Coletando fichas no Maps…", lendo:"Conferindo empresas…", concluida:"Pesquisa concluída.", cancelada:"Pesquisa parada.", erro:"Pesquisa interrompida."})[st.navegador.estado] || "Conectando…")} ${st.navegador.analisadas || 0} analisadas · ${st.navegador.encontradas || 0} candidatas. ${esc(st.navegador.erro || "")}</div>` : ""}
-    ${st.buscando && st.navegador ? '<button class="btn" data-acao="parar-navegador" style="margin-top:12px">Parar e importar encontradas</button>' : ""}
+    ${j ? `<div class="aviso info">${esc(({listando:"Coletando fichas no Maps…", lendo:"Conferindo empresas…", pausada:"Pesquisa pausada.", concluida:"Pesquisa concluída.", cancelada:"Pesquisa cancelada.", erro:"Pesquisa interrompida."})[j.estado] || "Conectando…")} ${j.analisadas || 0} fichas verificadas · ${j.encontradas || 0} candidatas. ${esc(j.erro || "")}</div><div class="progresso" role="progressbar" aria-label="Progresso da pesquisa" aria-valuenow="${progresso}" aria-valuemin="0" aria-valuemax="100"><i style="width:${progresso}%"></i></div>` : ""}
+    ${st.buscando && j?.estado === "pausada" ? '<button class="btn p" data-acao="retomar-pausa">Retomar busca</button>' : ""}
+    ${st.buscando && j && j.estado !== "pausada" ? '<button class="btn" data-acao="pausar-navegador">Pausar busca</button>' : ""}
+    ${st.buscando && j ? '<button class="btn" data-acao="parar-navegador" style="margin-top:12px">Cancelar e importar encontradas</button>' : ""}
   </div><form class="card" id="f-busca">
     <div class="campo" style="margin-bottom:14px"><label>Como pesquisar</label><select class="in" id="fonte-busca" name="fonte"${st.buscando ? " disabled" : ""}><option value="navegador"${st.fonte === "navegador" ? " selected" : ""}>Navegador grátis (extensão)</option><option value="google"${st.fonte === "google" ? " selected" : ""}>API Google (exige chave e faturamento)</option></select></div>
     <div class="form-busca">
@@ -215,6 +220,20 @@ function telaBuscar() {
     <p class="sub" style="margin-top:12px">Até 60 fichas por pesquisa. Filtros: telefone, nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações; empresas com site ou agenda identificados ficam fora. No navegador, os candidatos precisam de confirmação antes de entrar na fila. A quantidade é uma meta, sem garantia de resultados.</p>
     <p class="sub">As novas empresas ficam com demo por ramo e mensagem personalizada, conforme seus planos e configurações. Revise em <a href="#fila">Fila de envio</a>; a demo vai ao ar ao enviar ou publicar. O envio do WhatsApp continua manual.</p>
   </form>
+  <form class="card" id="f-automacao" style="margin-top:14px"><h3>Agendamento da extensão</h3>
+    <p class="sub">A busca só roda enquanto este computador e o navegador estiverem ligados. Os resultados ficam para revisão quando o painel for aberto; nenhuma mensagem é enviada.</p>
+    <div class="form-busca" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="campo"><label>Quando iniciar</label><select class="in" name="modo"><option value="manual"${st.automacao.modo === "manual" ? " selected" : ""}>Somente quando eu pesquisar</option><option value="abrir"${st.automacao.modo === "abrir" ? " selected" : ""}>Ao abrir o painel</option><option value="diario"${st.automacao.modo === "diario" ? " selected" : ""}>Uma vez por dia</option></select></div>
+      <div class="campo"><label>Meta por busca</label><select class="in" name="quantidade">${[10,20,40,60].map(n => `<option value="${n}"${Number(st.automacao.quantidade) === n ? " selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div class="campo"><label>Horário diário</label><input class="in" name="horario" type="time" value="${esc(st.automacao.horario || "09:00")}"></div>
+      <div class="campo"><label>Ramos (um por linha)</label><textarea class="in" name="ramos" rows="4" placeholder="Barbearias\nPet shops">${esc(st.automacao.ramos)}</textarea></div>
+      <div class="campo"><label>Cidades (Cidade, UF por linha)</label><textarea class="in" name="cidades" rows="4" placeholder="Nova Iguaçu, RJ\nNiterói, RJ">${esc(st.automacao.cidades)}</textarea></div>
+      <div class="campo"><label>&nbsp;</label><button class="btn p" type="submit">Salvar agendamento</button></div>
+    </div>
+    <p class="sub">O agendamento percorre combinações de ramo e cidade. A meta é por execução; filtros de nota, avaliações e telefone continuam valendo.</p>
+    ${st.automacao.erro ? `<div class="aviso erro">Última execução agendada não iniciou (${esc(st.automacao.erroEm || "")}). ${esc(st.automacao.erro)}</div>` : ""}
+  </form>
+  ${st.historicoNavegador.length ? `<div class="card" style="margin-top:14px"><h3>Histórico da extensão</h3><ul class="lista">${st.historicoNavegador.slice(0,8).map(x => `<li><span>${esc(x.termo || "Busca")}${x.automatica ? " · automática" : ""}</span><span class="meta">${x.analisadas || 0} analisadas · ${x.encontradas || 0} candidatas · ${esc(x.estado)} · ${quando(x.finalizadaEm || x.iniciada)}</span></li>`).join("")}</ul></div>` : ""}
   ${st.erroBusca ? `<div class="aviso erro" style="margin-top:14px">${esc(st.erroBusca)}${/GOOGLE_PLACES_API_KEY|Google recusou/.test(st.erroBusca) ? `<br>Sem chave, selecione <b>Navegador grátis</b> acima e use a extensão.` : ""}</div>` : ""}
   ${r ? `<div style="margin-top:18px">
     <div class="ferr"><span><b>${r.analisadas ?? r.total}</b> fichas analisadas · <b>${r.qualificados}</b> qualificadas · <b>${r.novos}</b> novas${r.revisao ? " para revisão" : ""}</span><span class="esp"></span>
@@ -492,6 +511,56 @@ function csv(qual) {
 }
 
 let importandoNavegador = false;
+async function importarJobNavegador(j, usuario, acaoAck = "ACK") {
+  const form = j.form || {};
+  const candidatos = prepararCandidatos(j.resultados || [], st.perfil, form, st.leads);
+  const leads = candidatos.length ? await sb.db("leads?on_conflict=user_id,place_id", {
+    method:"POST", body:candidatos.map(l => ({...l, user_id:usuario})), prefer:"resolution=ignore-duplicates,return=representation"
+  }) || [] : [];
+  for (const l of leads) if (!st.leads.some(x => x.id === l.id)) st.leads.unshift(l);
+  st.busca = { termo:j.termo, total:leads.length, novos:leads.length, qualificados:0, analisadas:j.analisadas, revisao:true, leads };
+  st.erroBusca = j.erro || "";
+  if (!leads.length && !st.erroBusca && (j.resultados || []).length) st.erroBusca = "Nenhuma candidata nova dentro dos filtros. Duplicatas existentes foram preservadas.";
+  await chamarExtensao(acaoAck, {usuario, id:j.id});
+  st.historicoNavegador = await chamarExtensao("HISTORICO", {usuario}) || st.historicoNavegador;
+  if (leads.length) toast(`${leads.length} empresas importadas para revisão.`);
+  return leads;
+}
+
+async function carregarAutomacaoExtensao(usuario) {
+  try {
+    const config = await chamarExtensao("GET_AUTOMACAO", {usuario});
+    if (config) {
+      st.automacao = { modo:config.modo || "manual", ramos:[...new Set((config.tarefas || []).map(x => x.tipo))].join("\n"),
+        cidades:[...new Map((config.tarefas || []).map(x => [`${x.cidade}|${x.uf}`, `${x.cidade}, ${x.uf}`])).values()].join("\n"),
+        quantidade:config.quantidade || 20, horario:config.horario || "09:00", erro:config.erro || "", erroEm:config.erroEm || "" };
+      await chamarExtensao("UPDATE_FILTROS", {usuario, nota_minima:st.perfil.nota_minima,
+        avaliacoes_minimas:st.perfil.avaliacoes_minimas});
+    }
+    st.historicoNavegador = await chamarExtensao("HISTORICO", {usuario}) || [];
+    const pendentes = await chamarExtensao("PENDENTES", {usuario}) || [];
+    for (const job of pendentes) await importarJobNavegador(job, usuario, "ACK_PENDENTE");
+    let atual = await chamarExtensao("STATUS", {usuario});
+    if (atual?.finalizada) await importarJobNavegador(atual, usuario);
+    else if (atual && !atual.finalizada) {
+      st.navegador = atual; st.buscando = true;
+      acompanharNavegador(atual.form || st.form, usuario).catch(e => { st.erroBusca = e.message; st.buscando = false; render(); });
+      render(); return;
+    }
+    if (st.automacao.modo === "abrir") {
+      atual = await chamarExtensao("AUTO_START", {usuario});
+      if (atual && !atual.finalizada) {
+        st.navegador = atual; st.buscando = true; render();
+        acompanharNavegador(atual.form || st.form, usuario).catch(e => { st.erroBusca = e.message; st.buscando = false; render(); });
+      }
+    }
+  } catch (e) {
+    if (!/Extensão não conectada|Recarregue o painel para conectar/.test(e.message || "")) {
+      st.erroBusca = `Não foi possível recuperar a pesquisa salva: ${e.message}`; render();
+    }
+  }
+}
+
 async function buscarNavegador(form) {
   const usuario = sb.usuario()?.id;
   st.buscando = true; st.erroBusca = ""; st.navegador = {estado:"conectando"}; render();
@@ -514,17 +583,8 @@ async function acompanharNavegador(form, usuario) {
     if (importandoNavegador) return;
     importandoNavegador = true;
     try {
-      const candidatos = prepararCandidatos(j.resultados, st.perfil, form, st.leads);
-      const leads = candidatos.length ? await sb.db("leads?on_conflict=user_id,place_id", {
-        method:"POST", body: candidatos.map(l => ({...l, user_id: usuario})),
-        prefer:"resolution=ignore-duplicates,return=representation"
-      }) || [] : [];
-      for (const l of leads) st.leads.unshift(l);
-      st.busca = { termo:j.termo, total:leads.length, novos:leads.length, qualificados:0, analisadas:j.analisadas, revisao:true, leads };
-      st.erroBusca = j.erro || "";
+      const leads = await importarJobNavegador(j, usuario);
       if (!leads.length && !st.erroBusca) st.erroBusca = "Nenhuma candidata nova dentro dos filtros. Tente outro ramo ou bairro. Fichas sem telefone, nota ou quantidade de avaliações não são importadas.";
-      await chamarExtensao("ACK", {usuario, id:j.id});
-      toast(`${leads.length} empresas importadas para revisão.`);
     } finally { importandoNavegador = false; st.buscando = false; render(); }
     return;
   }
@@ -584,6 +644,13 @@ document.addEventListener("click", async (ev) => {
   }
   if (a === "parar-navegador") {
     try { await chamarExtensao("CANCEL", {usuario: sb.usuario()?.id}); } catch (e) { toast(e.message, true); }
+    return;
+  }
+  if (a === "pausar-navegador" || a === "retomar-pausa") {
+    try {
+      st.navegador = await chamarExtensao(a === "pausar-navegador" ? "PAUSE" : "RESUME", {usuario: sb.usuario()?.id});
+      render();
+    } catch (e) { toast(e.message, true); }
     return;
   }
   if (a === "sair") { await sb.sair(); return render(); }
@@ -649,6 +716,24 @@ document.addEventListener("input", (ev) => {
 });
 document.addEventListener("submit", async (ev) => {
   if (ev.target.id === "f-busca") return buscar(ev);
+  if (ev.target.id === "f-automacao") {
+    ev.preventDefault();
+    const f = Object.fromEntries(new FormData(ev.target));
+    try {
+      await chamarExtensao("SET_AUTOMACAO", { ...f, usuario:sb.usuario()?.id, nota_minima:st.perfil.nota_minima,
+        avaliacoes_minimas:st.perfil.avaliacoes_minimas });
+      st.automacao = { ...st.automacao, ...f, quantidade:Number(f.quantidade), erro:"", erroEm:"" };
+      toast("Agendamento salvo na extensão."); render();
+      if (f.modo === "abrir" && !st.buscando) {
+        const j = await chamarExtensao("AUTO_START", {usuario:sb.usuario()?.id});
+        if (j && !j.finalizada) {
+          st.navegador = j; st.buscando = true; render();
+          acompanharNavegador(j.form || st.form, sb.usuario()?.id).catch(e => { st.erroBusca = e.message; st.buscando = false; render(); });
+        }
+      }
+    } catch (e) { toast(e.message, true); }
+    return;
+  }
   if (ev.target.id === "f-manual") {
     ev.preventDefault();
     const c = Object.fromEntries(new FormData(ev.target));
@@ -711,5 +796,6 @@ async function iniciar() {
   render();
   try { await carregar(); } catch (e) { if (e.status === 401) { await sb.sair(); return render(); } toast(e.message, true); st.carregado = true; }
   render();
+  await carregarAutomacaoExtensao(sb.usuario()?.id);
 }
 iniciar();

@@ -16,6 +16,14 @@ export function chamarExtensao(acao, dados = {}, timeout = 6000) {
     window.postMessage({ canal: 'LF_EXT_PEDIDO', id, acao, dados }, location.origin);
   });
 }
+
+export function progressoBusca(j) {
+  if (!j) return 0;
+  if (j.finalizada) return 100;
+  if (j.estado === "listando") return Math.min(50, Math.round(50 * (j.total || 0) / 60));
+  return Math.min(99, 50 + Math.round(49 * (j.analisadas || 0) / Math.max(1, j.total || 1)));
+}
+
 const telefoneChave = (t) => {
   const d = digitos(t); return d.startsWith('55') && [12, 13].includes(d.length) ? d.slice(2) : d;
 };

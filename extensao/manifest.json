@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lead Finder — busca grátis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Pesquisa fichas públicas no Google Maps e leva candidatos para revisão no seu Lead Finder, sem chave de API.",
   "minimum_chrome_version": "120",
   "permissions": [

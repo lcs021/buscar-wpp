@@ -4,7 +4,8 @@
   window.addEventListener('message', async (event) => {
     const m = event.data;
     if (event.source !== window || event.origin !== location.origin || m?.canal !== 'LF_EXT_PEDIDO' || typeof m.id !== 'string') return;
-    if (!['PING', 'START', 'STATUS', 'CANCEL', 'ACK'].includes(m.acao)) return;
+    if (!['PING', 'START', 'STATUS', 'CANCEL', 'ACK', 'PAUSE', 'RESUME', 'SET_AUTOMACAO', 'GET_AUTOMACAO',
+      'AUTO_START', 'PENDENTES', 'HISTORICO', 'ACK_PENDENTE', 'UPDATE_FILTROS'].includes(m.acao)) return;
     try {
       const resposta = await chrome.runtime.sendMessage({ acao: m.acao, dados: m.dados });
       window.postMessage({ canal: 'LF_EXT_RESPOSTA', id: m.id, resposta }, location.origin);
