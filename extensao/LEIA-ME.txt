@@ -1,0 +1,21 @@
+LEAD FINDER — BUSCA GRÁTIS 1.0.0
+
+1. Extraia o ZIP para uma pasta no computador e mantenha a pasta.
+2. Abra chrome://extensions ou brave://extensions na barra de endereços.
+3. Ative Modo do desenvolvedor.
+4. Clique em Carregar sem compactação e escolha a pasta que contém manifest.json.
+5. Recarregue https://lcs021.github.io/buscar-wpp/ e entre na sua conta.
+6. Buscar empresas > Navegador grátis > preencha ramo/cidade/estado > pesquisar.
+
+A aba do Maps é usada pela busca; não navegue nela durante a execução.
+O progresso aparece no painel. Se recarregar, use Retomar pesquisa da extensão.
+O Google pode mudar a tela ou pedir verificação; a extensão para e avisa.
+Dados ausentes não são inventados. Visualização limitada sem avaliações pode não gerar resultados.
+Os candidatos ficam em Leads > Revisar navegador até você confirmar que não têm site.
+As demos e mensagens usam os modelos do painel. O envio pelo WhatsApp é manual.
+Nenhuma senha, cookie ou token de login é entregue à extensão.
+
+Para atualizar: substitua os arquivos da pasta extraída, clique em Recarregar na extensão
+e recarregue o painel. Para remover: Remover na página de extensões.
+
+Instruções: https://lcs021.github.io/buscar-wpp/extensao.html

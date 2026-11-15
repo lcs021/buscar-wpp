@@ -2,13 +2,27 @@
 
 Sistema na nuvem para prospectar comércios sem site:
 
-1. **Busca empresas** no Google (Places API oficial) por tipo, cidade e bairro.
+1. **Busca empresas grátis pelo navegador**, usando a extensão para Chrome/Brave, ou pela Google Places API opcional, por tipo, cidade e bairro.
 2. **Qualifica** sozinho: nota alta + muitas avaliações + falha na presença digital (sem site ou apenas Instagram/Facebook/WhatsApp; links de pedido, cardápio e agenda ficam fora).
 3. **Monta um site demo** para cada empresa, com o tema do nicho (barbearia, oficina, pizzaria, pet, dentista…), com link público e faixa "DEMONSTRAÇÃO".
 4. **Fila de envio no WhatsApp**: a mensagem personalizada já vem com o link do site. Um clique abre o WhatsApp com tudo pronto, você aperta enviar, e o sistema marca como enviado e pula para a próxima empresa.
 5. **Avisa quem abriu o site demo**, com quantas vezes e quando. É a hora certa de chamar de novo.
 
 Tudo roda no Supabase (banco, login e busca) e numa hospedagem grátis de site estático (Netlify). Não precisa instalar nada no computador.
+
+## Busca gratuita — sem chave do Google
+
+[Baixar extensão e ver instalação](https://lcs021.github.io/buscar-wpp/extensao.html).
+
+Extraia o ZIP, abra `chrome://extensions` (ou `brave://extensions`), ative **Modo do desenvolvedor** e use **Carregar sem compactação** na pasta extraída. Recarregue o painel. Em **Buscar empresas**, deixe **Navegador grátis**, preencha ramo/cidade/estado e clique em **Abrir navegador e pesquisar grátis**.
+
+A extensão abre uma aba do Google Maps e lê até 60 fichas públicas, uma por vez. Deixe a aba aberta. Não precisa de cartão, API ou chave. Se o Google pedir consentimento/verificação, a pesquisa para e avisa; resolva no navegador e inicie novamente. Mudanças na tela ou visualização limitada sem telefone/nota/quantidade de avaliações podem impedir resultados. Nenhum dado ausente é inventado.
+
+As candidatas são importadas para **Leads → Revisar navegador**, com demo e mensagem pelos modelos existentes. Confira no Google e use **Conferi: não tem site** nos detalhes para liberar a fila. A ausência de botão Site não comprova ausência de site na internet. Sites/agenda identificados, empresas fechadas e fichas abaixo dos filtros não são importados. Cadastros existentes são preservados, inclusive os descartados.
+
+A extensão não recebe senha nem tokens do Supabase. Só entrega dados públicos ao painel, que grava usando a sessão do usuário e RLS. O WhatsApp permanece manual. Se recarregar o painel durante a coleta, use **Retomar pesquisa da extensão**.
+
+Fontes revisáveis: `extensao/`; ponte e validação: `web/navegador.js`; pacote: `python3 tools/empacotar-extensao.py`. O workflow do Pages empacota a extensão antes de publicar. Atualizações da extensão exigem substituir a pasta extraída e clicar em **Recarregar** na página de extensões.
 
 ---
 
@@ -147,6 +161,6 @@ A atualização do GitHub Pages **não publica a função do Supabase**. Depois 
 Verificações locais (Node 24+):
 
 ```bash
-node --test tests/buscar-empresas.test.mjs
+node --test tests/*.test.mjs
 for arquivo in web/*.js; do node --check "$arquivo"; done
 ```

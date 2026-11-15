@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Lead Finder — busca grátis",
+  "version": "1.0.0",
+  "description": "Pesquisa fichas públicas no Google Maps e leva candidatos para revisão no seu Lead Finder, sem chave de API.",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://lcs021.github.io/buscar-wpp/*"
+      ],
+      "js": [
+        "painel.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.google.com/maps/*",
+        "https://www.google.com.br/maps/*"
+      ],
+      "js": [
+        "maps.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://www.google.com/maps/*",
+    "https://www.google.com.br/maps/*"
+  ]
+}

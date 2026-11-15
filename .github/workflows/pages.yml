@@ -19,6 +19,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Empacotar extensão gratuita
+        run: python3 tools/empacotar-extensao.py
       - uses: actions/configure-pages@v5
       # Cada publicação ganha uma versão nos arquivos: o navegador baixa o código novo na hora em vez de usar o guardado.
       - name: Versionar arquivos (evita cache antigo)

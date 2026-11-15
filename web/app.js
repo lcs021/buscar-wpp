@@ -1,5 +1,6 @@
 import * as sb from "./sb.js";
-import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo } from "./shared.js";
+import { chamarExtensao, prepararCandidatos } from "./navegador.js";
+import { TEMAS, FALHAS, STATUS, esc, notaBR, milhar, digitos, numeroWhats, linkMaps, linkSite, mensagem, renderSite, nomeCurto, montarLead, lerCSV, ESTILOS, mensagemEstilo, qualificarLocal } from "./shared.js";
 import { PLANOS_PADRAO, reais } from "./planos.js";
 
 const $app = document.getElementById("app");
@@ -15,7 +16,7 @@ const st = {
   leads: [], buscas: [], carregado: false,
   filtro: "qualificados", status: "", texto: "", nicho: "",
   aberto: null,           // id do lead na gaveta
-  busca: null, buscando: false, erroBusca: "",
+  busca: null, buscando: false, erroBusca: "", navegador: null, fonte: "navegador",
   form: { tipo: "", cidade: "", uf: "", bairro: "", quantidade: 20 },
   filaPos: 0, menu: false,
   estilo: {},             // estilo de mensagem escolhido por lead
@@ -113,7 +114,7 @@ function telaLogin(erro = "") {
 
 const PAGINAS = [
   ["dashboard", "Dashboard", "Visão geral da prospecção"],
-  ["buscar", "Buscar empresas", "Pesquise no Google e veja quem não tem site"],
+  ["buscar", "Buscar empresas", "Busca grátis pelo navegador, sem chave do Google"],
   ["adicionar", "Adicionar empresas", "Cadastre na mão ou importe uma planilha (não precisa da API do Google)"],
   ["fila", "Fila de envio", "Mande as mensagens uma a uma, em um clique"],
   ["leads", "Leads", "Todas as empresas encontradas"],
@@ -194,23 +195,31 @@ function telaDashboard() {
 function telaBuscar() {
   const f = st.form;
   const r = st.busca;
-  return `<form class="card" id="f-busca">
+  return `<div class="card" style="margin-bottom:14px"><h3>Busca grátis no seu navegador</h3>
+    <p>A extensão abre o Google Maps, pesquisa e importa candidatos com telefone, nota e avaliações dentro dos seus filtros. Os candidatos entram para revisão, com demo e mensagem prontas.</p>
+    <div class="linha-btns"><a class="btn p" href="downloads/lead-finder-extensao.zip" download>Baixar extensão grátis</a><a class="btn" href="extensao.html" target="_blank" rel="noopener">Como instalar no Chrome/Brave</a><button class="btn" data-acao="retomar-navegador"${st.buscando ? " disabled" : ""}>Retomar pesquisa da extensão</button></div>
+    <p class="sub">Sem chave de API ou cartão. Deixe a aba do Maps aberta; a busca pode levar alguns minutos. Se houver consentimento ou verificação do Google, a pesquisa para e avisa.</p>
+    ${st.navegador ? `<div class="aviso info">${esc(({listando:"Coletando fichas no Maps…", lendo:"Conferindo empresas…", concluida:"Pesquisa concluída.", cancelada:"Pesquisa parada.", erro:"Pesquisa interrompida."})[st.navegador.estado] || "Conectando…")} ${st.navegador.analisadas || 0} analisadas · ${st.navegador.encontradas || 0} candidatas. ${esc(st.navegador.erro || "")}</div>` : ""}
+    ${st.buscando && st.navegador ? '<button class="btn" data-acao="parar-navegador" style="margin-top:12px">Parar e importar encontradas</button>' : ""}
+  </div><form class="card" id="f-busca">
+    <div class="campo" style="margin-bottom:14px"><label>Como pesquisar</label><select class="in" id="fonte-busca" name="fonte"${st.buscando ? " disabled" : ""}><option value="navegador"${st.fonte === "navegador" ? " selected" : ""}>Navegador grátis (extensão)</option><option value="google"${st.fonte === "google" ? " selected" : ""}>API Google (exige chave e faturamento)</option></select></div>
     <div class="form-busca">
       <div class="campo"><label>Tipo de empresa</label><input class="in" name="tipo" placeholder="Ex.: barbearias" value="${esc(f.tipo)}"></div>
       <div class="campo"><label>Cidade</label><input class="in" name="cidade" placeholder="Ex.: Nova Iguaçu" value="${esc(f.cidade)}"></div>
       <div class="campo"><label>Estado</label><select class="in" name="uf"><option value="">UF</option>${UFS.map((u) => `<option${u === f.uf ? " selected" : ""}>${u}</option>`).join("")}</select></div>
       <div class="campo"><label>Bairro (opcional)</label><input class="in" name="bairro" placeholder="Ex.: Centro" value="${esc(f.bairro)}"></div>
-      <div class="campo"><label>Meta de empresas sem site</label><select class="in" name="quantidade">${[10, 20, 40, 60].map((n) => `<option${n == f.quantidade ? " selected" : ""}>${n}</option>`).join("")}</select></div>
-      <button class="btn p g" type="submit"${st.buscando ? " disabled" : ""}>${st.buscando ? '<span class="giro"></span> PESQUISANDO…' : `${I.busca} BUSCAR E ADICIONAR EMPRESAS`}</button>
+      <div class="campo"><label>Meta de candidatas</label><select class="in" name="quantidade">${[10, 20, 40, 60].map((n) => `<option${n == f.quantidade ? " selected" : ""}>${n}</option>`).join("")}</select></div>
+      <button class="btn p g" type="submit"${st.buscando ? " disabled" : ""}>${st.buscando ? '<span class="giro"></span> PESQUISANDO…' : `${I.busca} ${st.fonte === "navegador" ? "ABRIR NAVEGADOR E PESQUISAR GRÁTIS" : "BUSCAR PELA API GOOGLE"}`}</button>
     </div>
     <div class="chips" style="margin-top:12px">${SUGESTOES.map((s) => `<button type="button" class="chip${f.tipo === s ? " on" : ""}" data-tipo="${esc(s)}">${esc(s)}</button>`).join("")}</div>
-    <p class="sub" style="margin-top:12px">A busca analisa até 60 fichas e adiciona as empresas em funcionamento, sem site próprio nem link de pedido/agenda, com telefone, nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações. A quantidade é uma meta e pode não ser atingida. Ajuste os filtros em Configurações.</p>
-    <p class="sub">As novas empresas entram no sistema com demo por ramo e mensagem personalizada, conforme seus planos e configurações. Revise em <a href="#fila">Fila de envio</a>; a demo vai ao ar ao enviar ou publicar. O envio do WhatsApp continua manual.</p>
+    <p class="sub" style="margin-top:12px">Até 60 fichas por pesquisa. Filtros: telefone, nota ≥ ${notaBR(st.perfil.nota_minima)} e ≥ ${st.perfil.avaliacoes_minimas} avaliações; empresas com site ou agenda identificados ficam fora. No navegador, os candidatos precisam de confirmação antes de entrar na fila. A quantidade é uma meta, sem garantia de resultados.</p>
+    <p class="sub">As novas empresas ficam com demo por ramo e mensagem personalizada, conforme seus planos e configurações. Revise em <a href="#fila">Fila de envio</a>; a demo vai ao ar ao enviar ou publicar. O envio do WhatsApp continua manual.</p>
   </form>
-  ${st.erroBusca ? `<div class="aviso erro" style="margin-top:14px">${esc(st.erroBusca)}${/GOOGLE_PLACES_API_KEY|Google recusou/.test(st.erroBusca) ? `<br>Sem a chave do Google, use <a href="#adicionar">Adicionar empresas</a>: cadastro manual ou importação de planilha.` : ""}</div>` : ""}
+  ${st.erroBusca ? `<div class="aviso erro" style="margin-top:14px">${esc(st.erroBusca)}${/GOOGLE_PLACES_API_KEY|Google recusou/.test(st.erroBusca) ? `<br>Sem chave, selecione <b>Navegador grátis</b> acima e use a extensão.` : ""}</div>` : ""}
   ${r ? `<div style="margin-top:18px">
-    <div class="ferr"><span><b>${r.analisadas ?? r.total}</b> fichas analisadas · <b>${r.qualificados}</b> qualificadas · <b>${r.novos}</b> novas</span><span class="esp"></span>
+    <div class="ferr"><span><b>${r.analisadas ?? r.total}</b> fichas analisadas · <b>${r.qualificados}</b> qualificadas · <b>${r.novos}</b> novas${r.revisao ? " para revisão" : ""}</span><span class="esp"></span>
       ${r.qualificados ? `<a class="btn p" href="#fila">Ir para a fila de envio →</a>` : ""}</div>
+    ${r.revisao ? `<div class="aviso info">Abra cada empresa abaixo, confira se ela não tem site e clique em <b>Conferi: não tem site</b> para liberar a fila. As demos e mensagens já podem ser pré-visualizadas.</div>` : ""}
     ${r.fora_filtro != null ? `<p class="sub">${r.fora_filtro} fora do filtro · ${r.ignoradas} descartadas anteriormente e preservadas. Empresas já cadastradas são atualizadas sem alterar mensagens editadas nem o andamento do contato.</p>` : ""}
     ${r.qualificados < r.meta ? `<div class="aviso info">A meta de ${r.meta} empresas não foi atingida. Experimente outro ramo, bairro ou cidade.</div>` : ""}
     ${tabela(r.leads)}
@@ -256,6 +265,7 @@ function filtrar(L) {
   const t = st.texto.trim().toLowerCase();
   return L.filter((l) => {
     if (st.filtro === "qualificados" && !l.qualificado) return false;
+    if (st.filtro === "revisao" && !(l.busca_termo?.startsWith("navegador:") && !l.qualificado && l.status === "novo" && l.status_site === "sem_site")) return false;
     if (st.filtro === "sem_site" && l.status_site !== "sem_site") return false;
     if (st.filtro === "redes" && !["instagram", "facebook", "whatsapp", "link_agregador"].includes(l.status_site)) return false;
     if (st.filtro === "whats" && !numeroWhats(l)) return false;
@@ -269,7 +279,7 @@ function filtrar(L) {
 }
 
 function telaLeads() {
-  const filtros = [["qualificados", "Qualificadas"], ["todos", "Todas"], ["sem_site", "Sem site"], ["redes", "Só redes/links"],
+  const filtros = [["qualificados", "Qualificadas"], ["revisao", "Revisar navegador"], ["todos", "Todas"], ["sem_site", "Sem site"], ["redes", "Só redes/links"],
     ["whats", "Com WhatsApp"], ["viram", "Abriram a demo"], ["favoritos", "Favoritos"]];
   const lista = filtrar(st.leads);
   return `<div class="ferr">
@@ -384,6 +394,7 @@ function telaGaveta() {
     <button class="btn fechar" data-acao="fechar">Fechar</button></div>
   <div class="det"><div>
     <div class="aviso info" style="margin-bottom:14px">${esc(l.motivo)}</div>
+    ${l.busca_termo?.startsWith("navegador:") && !l.qualificado && l.status === "novo" && l.status_site === "sem_site" ? `<button class="btn p" data-acao="confirmar-sem-site" data-id="${l.id}">Conferi: não tem site</button>` : ""}
     <dl class="info">
       <dt>Telefone</dt><dd>${l.telefone ? `<a href="tel:+55${digitos(l.telefone)}">${esc(l.telefone)}</a> ${num ? "· WhatsApp provável" : "· fixo (confirme se tem WhatsApp)"}` : "—"}</dd>
       <dt>Endereço</dt><dd>${esc(l.endereco || "—")}</dd>
@@ -480,12 +491,52 @@ function csv(qual) {
   a.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
 }
 
+let importandoNavegador = false;
+async function buscarNavegador(form) {
+  const usuario = sb.usuario()?.id;
+  st.buscando = true; st.erroBusca = ""; st.navegador = {estado:"conectando"}; render();
+  try {
+    await chamarExtensao("PING");
+    const j = await chamarExtensao("START", { ...form, usuario, nota_minima: st.perfil.nota_minima, avaliacoes_minimas: st.perfil.avaliacoes_minimas });
+    st.navegador = j; render();
+    await acompanharNavegador(form, usuario);
+  } catch (e) { st.erroBusca = e.message; st.buscando = false; render(); }
+}
+async function acompanharNavegador(form, usuario) {
+  for (;;) {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Uma troca de conta não pode importar resultados para outro usuário.
+    if (sb.usuario()?.id !== usuario) { st.buscando = false; return; }
+    const j = await chamarExtensao("STATUS", {usuario});
+    if (!j) throw new Error("Pesquisa não encontrada na extensão. Inicie novamente.");
+    st.navegador = j;
+    if (!j.finalizada) { if (location.hash === "#buscar") render(); continue; }
+    if (importandoNavegador) return;
+    importandoNavegador = true;
+    try {
+      const candidatos = prepararCandidatos(j.resultados, st.perfil, form, st.leads);
+      const leads = candidatos.length ? await sb.db("leads?on_conflict=user_id,place_id", {
+        method:"POST", body: candidatos.map(l => ({...l, user_id: usuario})),
+        prefer:"resolution=ignore-duplicates,return=representation"
+      }) || [] : [];
+      for (const l of leads) st.leads.unshift(l);
+      st.busca = { termo:j.termo, total:leads.length, novos:leads.length, qualificados:0, analisadas:j.analisadas, revisao:true, leads };
+      st.erroBusca = j.erro || "";
+      if (!leads.length && !st.erroBusca) st.erroBusca = "Nenhuma candidata nova dentro dos filtros. Tente outro ramo ou bairro. Fichas sem telefone, nota ou quantidade de avaliações não são importadas.";
+      await chamarExtensao("ACK", {usuario, id:j.id});
+      toast(`${leads.length} empresas importadas para revisão.`);
+    } finally { importandoNavegador = false; st.buscando = false; render(); }
+    return;
+  }
+}
+
 async function buscar(ev) {
   ev.preventDefault();
   if (st.buscando) return;
   const f = Object.fromEntries(new FormData(ev.target));
   st.form = { ...st.form, ...f };
   if (!f.tipo.trim() || !f.cidade.trim() || !f.uf) { st.erroBusca = "Preencha tipo de empresa, cidade e estado."; return render(); }
+  if (f.fonte === "navegador") return buscarNavegador(f);
   st.buscando = true; st.erroBusca = ""; render();
   try {
     const r = await sb.funcao("buscar-empresas", { ...f, quantidade: Number(f.quantidade) });
@@ -521,6 +572,20 @@ document.addEventListener("click", async (ev) => {
   }
   if (el.dataset.tipo) { st.form.tipo = el.dataset.tipo; const i = document.querySelector('#f-busca [name="tipo"]'); if (i) i.value = el.dataset.tipo; document.querySelectorAll("[data-tipo]").forEach((c) => c.classList.toggle("on", c === el)); return; }
   const id = el.dataset.id, l = id && leadPorId(id), a = el.dataset.acao;
+  if (a === "retomar-navegador" && !st.buscando) {
+    try {
+      const usuario = sb.usuario()?.id;
+      const j = await chamarExtensao("STATUS", {usuario});
+      if (!j) return toast("Nenhuma pesquisa pendente na extensão.");
+      st.navegador = j; st.buscando = true; st.erroBusca = ""; render();
+      await acompanharNavegador(j.form || st.form, usuario);
+    } catch (e) { st.erroBusca = e.message; st.buscando = false; render(); }
+    return;
+  }
+  if (a === "parar-navegador") {
+    try { await chamarExtensao("CANCEL", {usuario: sb.usuario()?.id}); } catch (e) { toast(e.message, true); }
+    return;
+  }
   if (a === "sair") { await sb.sair(); return render(); }
   if (a === "menu") { st.menu = !st.menu; return render(); }
   if (a === "fechar") { st.aberto = null; return render(); }
@@ -532,6 +597,10 @@ document.addEventListener("click", async (ev) => {
   if (!l) return;
   if (a === "fila-enviar") { await enviarWhats(l, document.getElementById("fila-msg").value); return; }
   if (a === "fila-descartar") return atualizar(l.id, { status: "descartado" }, "Descartado.");
+  if (a === "confirmar-sem-site" && l.busca_termo?.startsWith("navegador:") && l.status_site === "sem_site" && l.status === "novo") {
+    const q = qualificarLocal(l, st.perfil);
+    return atualizar(l.id, { ...q, motivo: q.qualificado ? "Sem site confirmado por você. " + q.motivo : q.motivo }, q.qualificado ? "Empresa liberada na fila. Demo e mensagem prontas." : "Empresa ainda fora dos filtros atuais.");
+  }
   if (a === "tem-site") return atualizar(l.id, { status_site: "com_site", qualificado: false, status: "descartado", demo_publicada: false, motivo: "Fora do filtro: já tem site próprio (marcado por você)." }, "Marcada como 'já tem site' e tirada da fila.");
   if (a === "enviar") return enviarWhats(l, document.getElementById("det-msg").value);
   if (a === "publicar") return atualizar(l.id, { demo_publicada: !l.demo_publicada }, l.demo_publicada ? "Demo fora do ar." : "Demo publicada.");
@@ -563,6 +632,10 @@ document.addEventListener("click", async (ev) => {
 
 document.addEventListener("change", (ev) => {
   const t = ev.target;
+  if (t.id === "fonte-busca") {
+    const form = document.getElementById("f-busca");
+    st.form = { ...st.form, ...Object.fromEntries(new FormData(form)) }; st.fonte = t.value; render();
+  }
   if (t.id === "sel-status") { st.status = t.value; render(); }
   if (t.id === "sel-nicho") { st.nicho = t.value; render(); }
   if (t.id === "det-status") atualizar(t.dataset.id, { status: t.value }, "Status atualizado.");

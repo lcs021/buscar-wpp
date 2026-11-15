@@ -13,5 +13,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test tests/buscar-empresas.test.mjs
-      - run: for arquivo in web/*.js; do node --check "$arquivo" || exit 1; done
+      - run: node --test tests/*.test.mjs
+      - run: for arquivo in web/*.js extensao/*.js; do node --check "$arquivo" || exit 1; done
+      - run: python3 tools/empacotar-extensao.py
