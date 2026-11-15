@@ -40,7 +40,11 @@
     if (m.acao === 'LER') {
       // Evita ler os dados antigos durante a troca de uma ficha para outra.
       if (m.esperado && location.href !== m.esperado) {
-        try { if (new URL(location.href).pathname !== new URL(m.esperado).pathname) { responder({ aguardar: true }); return; } } catch { responder({ aguardar: true }); return; }
+        try {
+          // O Maps acrescenta @coordenadas/data na navegação. Compare apenas o nome da ficha.
+          const fichaUrl = (url) => decodeURIComponent(new URL(url).pathname.split('/')[3] || '').replace(/\+/g, ' ');
+          if (fichaUrl(location.href) !== fichaUrl(m.esperado)) { responder({ aguardar: true }); return; }
+        } catch { responder({ aguardar: true }); return; }
       }
       const empresa = ficha(); responder(empresa ? { empresa } : { aguardar: true }); return;
     }

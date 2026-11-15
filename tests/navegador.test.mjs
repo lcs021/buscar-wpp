@@ -95,3 +95,26 @@ test('manifesto não solicita cookies, histórico, acesso amplo ou código remot
   assert.ok(!JSON.stringify(m).includes('<all_urls>'));
   assert.equal(m.manifest_version,3);
 });
+
+test('leitor aceita a URL canônica do Maps com coordenadas e lê a ficha sem presumir dados ausentes', async () => {
+  let listener;
+  const nota = {textContent:'4,8'};
+  const aval = {getAttribute:()=> '42 avaliações'};
+  const painel = {textContent:'Barbearia Teste',
+    querySelector:(s)=>s.includes('aria-hidden')?nota:null,
+    querySelectorAll:(s)=>s.includes('.F7nice')?[aval]:[]};
+  const h1 = {textContent:'Barbearia Teste',closest:()=>painel};
+  const telefone = {getAttribute:()=> 'phone:tel:+5521999991234'};
+  const doc = {body:{textContent:'Barbearia Teste'},querySelector:(s)=>
+    s.startsWith('h1')?h1:s.startsWith('button[data-item-id^="phone:')?telefone:s.includes('role="tablist"')?{}:null};
+  const ctx=vm.createContext({URL,document:doc,location:{href:'https://www.google.com/maps/place/Barbearia+Teste/@-22,-43,17z/data=!1sabc'},
+    chrome:{runtime:{onMessage:{addListener:fn=>listener=fn}}}});
+  vm.runInContext(await readFile(new URL('../extensao/maps.js',import.meta.url),'utf8'),ctx);
+  let r;
+  listener({acao:'LER',esperado:'https://www.google.com/maps/place/Barbearia+Teste/data=!1sabc'},null,x=>r=x);
+  assert.equal(r.empresa.nome,'Barbearia Teste');
+  assert.equal(r.empresa.nota,4.8);
+  assert.equal(r.empresa.avaliacoes,42);
+  listener({acao:'LER',esperado:'https://www.google.com/maps/place/Outra/'},null,x=>r=x);
+  assert.equal(r.aguardar,true);
+});
