@@ -1,11 +1,8 @@
--- Quota and idempotency ledger for reviewer initiated OSM searches.
--- A Lead Finder owner (user_id) is the current tenant boundary; this can move to
--- organization_id when the application adds a first-class organization table.
+-- Shared global daily request quota until the application has organizations/membership.
 CREATE TABLE IF NOT EXISTS public.osm_search_daily_usage (
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   quota_day date NOT NULL,
-  used_count smallint NOT NULL DEFAULT 0 CHECK (used_count BETWEEN 0 AND 50),
-  PRIMARY KEY (user_id, quota_day)
+  calls_used smallint NOT NULL DEFAULT 0 CHECK (calls_used BETWEEN 0 AND 50),
+  PRIMARY KEY (quota_day)
 );
 
 CREATE TABLE IF NOT EXISTS public.osm_search_requests (
@@ -19,16 +16,51 @@ CREATE TABLE IF NOT EXISTS public.osm_search_requests (
   results jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(results) = 'array'),
   observed_at timestamptz,
   failure_code text CHECK (failure_code IS NULL OR failure_code IN
-    ('source_unavailable', 'source_timeout', 'invalid_source_response')),
+    ('source_unavailable', 'source_timeout', 'invalid_source_response', 'reservation_expired_ambiguous')),
   created_at timestamptz NOT NULL DEFAULT now(),
+  reservation_expires_at timestamptz NOT NULL DEFAULT (now() + interval '2 minutes'),
+  recovered_at timestamptz,
+  recovery_reason text,
   completed_at timestamptz,
   PRIMARY KEY (user_id, request_key)
 );
+
+CREATE INDEX IF NOT EXISTS osm_search_requests_expired_idx
+  ON public.osm_search_requests (reservation_expires_at) WHERE state = 'reserved';
 
 ALTER TABLE public.osm_search_daily_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.osm_search_requests ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.osm_search_daily_usage, public.osm_search_requests FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.osm_search_daily_usage, public.osm_search_requests TO service_role;
+
+CREATE OR REPLACE FUNCTION public.osm_recuperar_reservas_abandonadas(p_limit integer DEFAULT 100)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_recovered integer;
+BEGIN
+  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 500 THEN
+    RAISE EXCEPTION 'invalid recovery batch size' USING ERRCODE = '22023';
+  END IF;
+  WITH stale AS (
+    SELECT r.user_id, r.request_key
+      FROM public.osm_search_requests r
+     WHERE r.state = 'reserved' AND r.reservation_expires_at <= now()
+     ORDER BY r.reservation_expires_at
+     LIMIT p_limit
+     FOR UPDATE SKIP LOCKED
+  )
+  UPDATE public.osm_search_requests r
+     SET state = 'failed', failure_code = 'reservation_expired_ambiguous',
+         recovered_at = now(), recovery_reason = 'lease_expired_before_result_persistence', completed_at = now()
+    FROM stale s
+   WHERE r.user_id = s.user_id AND r.request_key = s.request_key;
+  GET DIAGNOSTICS v_recovered = ROW_COUNT;
+  -- Do not release quota: source execution may have succeeded before persistence failed.
+  RETURN jsonb_build_object('recovered', v_recovered);
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.osm_reservar_pesquisa(
   p_user_id uuid, p_request_key uuid, p_city text, p_uf text, p_segment text
@@ -54,10 +86,12 @@ BEGIN
   END IF;
   v_query := jsonb_build_object('city', btrim(p_city), 'uf', upper(btrim(p_uf)), 'segment', p_segment);
 
-  INSERT INTO public.osm_search_daily_usage (user_id, quota_day)
-  VALUES (p_user_id, v_day) ON CONFLICT DO NOTHING;
-  SELECT u.used_count INTO v_used FROM public.osm_search_daily_usage u
-   WHERE u.user_id = p_user_id AND u.quota_day = v_day FOR UPDATE;
+  PERFORM public.osm_recuperar_reservas_abandonadas(100);
+
+  INSERT INTO public.osm_search_daily_usage (quota_day)
+  VALUES (v_day) ON CONFLICT DO NOTHING;
+  SELECT u.calls_used INTO v_used FROM public.osm_search_daily_usage u
+   WHERE u.quota_day = v_day FOR UPDATE;
 
   SELECT * INTO v_existing FROM public.osm_search_requests r
    WHERE r.user_id = p_user_id AND r.request_key = p_request_key FOR UPDATE;
@@ -71,15 +105,15 @@ BEGIN
     );
   END IF;
 
-  IF v_used + 10 > 50 THEN
+  IF v_used + 1 > 50 THEN
     RAISE EXCEPTION 'daily OSM research limit reached' USING ERRCODE = '54000';
   END IF;
-  UPDATE public.osm_search_daily_usage SET used_count = used_count + 10
-   WHERE user_id = p_user_id AND quota_day = v_day;
+  UPDATE public.osm_search_daily_usage SET calls_used = calls_used + 1
+   WHERE quota_day = v_day;
   INSERT INTO public.osm_search_requests
-    (user_id, request_key, quota_day, query, state, charged_count)
-  VALUES (p_user_id, p_request_key, v_day, v_query, 'reserved', 10);
-  RETURN jsonb_build_object('state', 'reserved', 'cached', false, 'reserved_count', 10);
+    (user_id, request_key, quota_day, query, state, charged_count, reservation_expires_at)
+  VALUES (p_user_id, p_request_key, v_day, v_query, 'reserved', 10, now() + interval '2 minutes');
+  RETURN jsonb_build_object('state', 'reserved', 'cached', false, 'reserved_count', 10, 'daily_calls_used', v_used + 1);
 END;
 $$;
 
@@ -141,8 +175,6 @@ BEGIN
   END LOOP;
 
   v_count := jsonb_array_length(p_results)::smallint;
-  UPDATE public.osm_search_daily_usage SET used_count = used_count - v_request.charged_count + v_count
-   WHERE user_id = p_user_id AND quota_day = v_request.quota_day;
   UPDATE public.osm_search_requests SET state = 'completed', result_count = v_count,
     charged_count = v_count, results = p_results, observed_at = p_observed_at,
     completed_at = now(), failure_code = NULL
@@ -186,9 +218,11 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.osm_reservar_pesquisa(uuid,uuid,text,text,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.osm_recuperar_reservas_abandonadas(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.osm_concluir_pesquisa(uuid,uuid,jsonb,timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.osm_reservar_pesquisa(uuid,uuid,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.osm_recuperar_reservas_abandonadas(integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.osm_concluir_pesquisa(uuid,uuid,jsonb,timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) TO service_role;
 

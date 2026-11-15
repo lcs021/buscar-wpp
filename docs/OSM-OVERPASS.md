@@ -10,15 +10,15 @@ The connector returns `503` before auth or quota work unless the Edge Function h
 - `OVERPASS_API_SELF_HOSTED=true`
 - the usual Supabase URL, anon key, and service-role key
 
-The `SELF_HOSTED` value is an operator attestation, not proof. Do not point the application at the shared public Overpass instances: the OSMF/FOSSGIS usage guidance says applications depending on public instances as a backend should host their own instance. Self-hosting has compute, data-update, monitoring, and bandwidth costs even though OSM data carries no API fee. The implementation also blocks known public endpoints and requires HTTPS.
+The `SELF_HOSTED` value is an operator attestation, not proof. Do not point the application at the shared public Overpass instances: the OSMF/FOSSGIS usage guidance says applications depending on public instances as a backend should host their own instance. Self-hosting has compute, data-update, monitoring, and bandwidth costs even though OSM data carries no API fee. The implementation blocks known public endpoints, requires HTTPS, and configures fetch to fail on redirects; any 3xx response is recorded as a source failure without following its Location.
 
 ## Limits and retry behavior
 
-- Tenant identity is the current Lead Finder row owner (`user_id`), because the schema has no organization table yet. The quota date is UTC.
-- A new request reserves 10 candidate slots under a row lock. The request itself asks Overpass for at most 10 elements; successful results charge their actual count and release unused slots. This caps output at 50 candidate elements per tenant per UTC day and at five new queries/day in the worst case.
-- Any source error retains the full 10-slot reservation and records a fixed error code. It never releases quota on a failed or ambiguous upstream call.
+- Until organization membership exists, one shared global counter permits at most 50 source-call reservations per UTC day across all reviewer accounts. This is deliberately more restrictive than a per-organization cap and is not an organization quota.
+- Each new idempotency key consumes one call reservation before any upstream request, including searches that succeed with zero results. The counter never decrements for empty results, source failures, interrupted calls, or ambiguous persistence. Each query asks for at most 10 elements; this separate response cap is not the daily quota.
+- A request lease expires after two minutes. The next reservation call recovers up to 100 expired reservations, marking them `failed` with `reservation_expired_ambiguous`, `recovered_at`, and a fixed recovery reason. Quota remains charged and that idempotency key can never call the source again. This avoids repeating an upstream request whose result may have been fetched but not persisted.
 - Reusing the same idempotency UUID with the same filters returns the saved state/results without another source query. Reusing it with different filters is rejected. The returned results are deduplicated by OSM element type/ID.
-- Each request has a 20-second Overpass timeout, a 4 MiB query-side `maxsize`, at most 10 result elements, and a 2 MiB response-read cap. There is one city/UF/segment query; no tiling, pagination, or repeated retries to the source.
+- Each request has a 20-second timeout kept active through response-body consumption and JSON parsing, a 4 MiB query-side `maxsize`, at most 10 result elements, a 2 MiB response-read cap, and a 4 KiB input JSON cap. There is one city/UF/segment query; no tiling, pagination, or repeated retries to the source.
 - Supported segment keys are fixed in code. There is no client-supplied result limit or Overpass QL fragment.
 
 ## Provenance and website evidence
@@ -30,6 +30,7 @@ Every response includes visible attribution `© OpenStreetMap contributors` and 
 ## Current limitations
 
 - This draft has no frontend control, no automatic import into `leads`, no scheduled worker, and no production endpoint configured. The new migration must be reviewed/applied separately before enabling a staged self-hosted endpoint.
-- Current tenants are users, not organizations. The quota maps one user account to one organization until a first-class organization/membership model exists.
+- Current tenants are not modeled. The limit is a single global 50-call/day ceiling shared by all users; it is not a per-organization quota. A first-class organization/membership model is required before changing that shared cap to separate organization quotas.
 - Exact municipality boundary lookup depends on OSM administrative relations carrying the expected name and `ISO3166-2=BR-<UF>` tag. A missing/ambiguous boundary or zero results is `inconclusive`; no fallback geocoder is called.
 - OSM data coverage varies. This connector is for source review, not a determination that an entity is qualified or lacks a site.
+

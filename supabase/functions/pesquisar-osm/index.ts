@@ -4,6 +4,7 @@ const ATRIBUICAO = "© OpenStreetMap contributors";
 const URL_DIREITOS = "https://www.openstreetmap.org/copyright";
 const MAX_RESULTADOS_CONSULTA = 10;
 const MAX_BYTES_RESPOSTA = 2 * 1024 * 1024;
+const MAX_BYTES_REQUEST = 4096;
 const TIMEOUT_MS = 20_000;
 const SEGMENTOS: Record<string, { chave: string; valor: string }> = {
   veterinaria: { chave: "amenity", valor: "veterinary" },
@@ -108,24 +109,33 @@ export function validarEndpointOverpass(raw: string | undefined, selfHosted: str
   }
 }
 
-async function lerRespostaLimitada(response: Response): Promise<string> {
-  const declaredLength = Number(response.headers.get("content-length") || 0);
-  if (declaredLength > MAX_BYTES_RESPOSTA || !response.body) throw new SourceError("invalid_source_response");
-  const reader = response.body.getReader();
+async function lerStreamLimitado(stream: ReadableStream<Uint8Array> | null, declaredLength: string | null, maxBytes: number, signal?: AbortSignal): Promise<string> {
+  const declared = declaredLength === null ? 0 : Number(declaredLength);
+  if (!Number.isFinite(declared) || declared < 0 || declared > maxBytes || !stream) throw new SourceError("invalid_source_response");
+  const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
+  let aborted = signal?.aborted ?? false;
+  const cancelOnAbort = () => {
+    aborted = true;
+    void reader.cancel().catch(() => undefined);
+  };
+  if (aborted) cancelOnAbort();
+  else signal?.addEventListener("abort", cancelOnAbort, { once: true });
   try {
     while (true) {
       const { done, value } = await reader.read();
+      if (aborted || signal?.aborted) throw new SourceError("source_timeout");
       if (done) break;
       total += value.byteLength;
-      if (total > MAX_BYTES_RESPOSTA) {
+      if (total > maxBytes) {
         await reader.cancel();
         throw new SourceError("invalid_source_response");
       }
       chunks.push(value);
     }
   } finally {
+    signal?.removeEventListener("abort", cancelOnAbort);
     reader.releaseLock();
   }
   const bytes = new Uint8Array(total);
@@ -135,6 +145,15 @@ async function lerRespostaLimitada(response: Response): Promise<string> {
     offset += chunk.byteLength;
   }
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
+export async function lerRespostaLimitada(response: Response, signal: AbortSignal): Promise<string> {
+  return await lerStreamLimitado(response.body, response.headers.get("content-length"), MAX_BYTES_RESPOSTA, signal);
+}
+
+async function lerRequestLimitado(request: Request): Promise<unknown> {
+  const text = await lerStreamLimitado(request.body, request.headers.get("content-length"), MAX_BYTES_REQUEST);
+  try { return JSON.parse(text); } catch { throw new Error("invalid JSON"); }
 }
 
 function websiteUrl(value: unknown): string | null {
@@ -224,6 +243,7 @@ export async function handler(
   request: Request,
   env: (key: string) => string | undefined,
   fetcher: typeof fetch = fetch,
+  timeoutMs = TIMEOUT_MS,
 ): Promise<Response> {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
@@ -232,7 +252,11 @@ export async function handler(
   if (!bearer) return json({ error: "authentication required" }, 401);
 
   let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid JSON" }, 400); }
+  try { body = await lerRequestLimitado(request); }
+  catch (error) {
+    if (error instanceof SourceError) return json({ error: "request body exceeds the 4096-byte limit or is invalid" }, 413);
+    return json({ error: "invalid JSON" }, 400);
+  }
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "invalid request" }, 400);
   const data = body as Record<string, unknown>;
   const filters = validarFiltros({ city: data.city, uf: data.uf, segment: data.segment });
@@ -258,6 +282,12 @@ export async function handler(
   } catch { userId = ""; }
   if (!userId) return json({ error: "authentication required" }, 401);
 
+  try {
+    await rpc(fetcher, base, serviceKey, "osm_recuperar_reservas_abandonadas", { p_limit: 100 });
+  } catch {
+    return json({ error: "reservation recovery unavailable; source not queried" }, 503);
+  }
+
   let reservation: Record<string, unknown>;
   try {
     reservation = await rpc(fetcher, base, serviceKey, "osm_reservar_pesquisa", {
@@ -278,11 +308,12 @@ export async function handler(
   const observedAt = new Date().toISOString();
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    let sourceResponse: Response;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      sourceResponse = await fetcher(endpoint, {
+      const sourceResponse = await fetcher(endpoint, {
         method: "POST",
+        redirect: "error",
+        credentials: "omit",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "User-Agent": "LeadFinder-OSM-connector/1.0",
@@ -290,12 +321,16 @@ export async function handler(
         body: new URLSearchParams({ data: buildOverpassQuery(filters) }),
         signal: controller.signal,
       });
-    } finally { clearTimeout(timeout); }
+      if (controller.signal.aborted) throw new SourceError("source_timeout");
+      if (sourceResponse.redirected || (sourceResponse.status >= 300 && sourceResponse.status < 400)) {
+        throw new SourceError("source_unavailable");
+      }
     if (!sourceResponse.ok) throw new SourceError("source_unavailable");
-    const sourceText = await lerRespostaLimitada(sourceResponse);
+      const sourceText = await lerRespostaLimitada(sourceResponse, controller.signal);
     let sourceData: unknown;
     try { sourceData = JSON.parse(sourceText); } catch { throw new SourceError("invalid_source_response"); }
     candidates = mapOverpassElements(sourceData, filters, observedAt);
+    } finally { clearTimeout(timeout); }
   } catch (error) {
     const failureCode = sourceFailureCode(error);
     try {
@@ -329,3 +364,4 @@ export async function handler(
 // deno-lint-ignore no-explicit-any
 const D = (globalThis as any).Deno;
 if (D?.serve && import.meta.main) D.serve((request: Request) => handler(request, (key) => D.env.get(key)));
+
