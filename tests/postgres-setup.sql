@@ -58,7 +58,8 @@ CREATE TABLE public.leads (
   favorito boolean NOT NULL DEFAULT false,
   observacoes text NOT NULL DEFAULT '',
   mensagem text,
-  enviado_em timestamptz
+  enviado_em timestamptz,
+  UNIQUE (user_id, place_id)
 );
 
 CREATE TABLE public.perfis (
