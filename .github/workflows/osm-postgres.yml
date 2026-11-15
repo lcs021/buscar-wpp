@@ -1,0 +1,37 @@
+name: OSM connector PostgreSQL regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  osm-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: osm_connector_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d osm_connector_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Prepare isolated fixture
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d osm_connector_test -v ON_ERROR_STOP=1 -f tests/postgres-osm-setup.sql
+      - name: Apply quota schema and regression
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d osm_connector_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261115010000_osm_overpass_connector.sql
+          psql -h localhost -U postgres -d osm_connector_test -v ON_ERROR_STOP=1 -f tests/postgres-osm-connector.sql

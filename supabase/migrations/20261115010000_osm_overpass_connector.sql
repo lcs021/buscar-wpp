@@ -1,0 +1,163 @@
+-- Quota and idempotency ledger for reviewer initiated OSM searches.
+-- A Lead Finder owner (user_id) is the current tenant boundary; this can move to
+-- organization_id when the application adds a first-class organization table.
+CREATE TABLE IF NOT EXISTS public.osm_search_daily_usage (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  quota_day date NOT NULL,
+  used_count smallint NOT NULL DEFAULT 0 CHECK (used_count BETWEEN 0 AND 50),
+  PRIMARY KEY (user_id, quota_day)
+);
+
+CREATE TABLE IF NOT EXISTS public.osm_search_requests (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  request_key uuid NOT NULL,
+  quota_day date NOT NULL,
+  query jsonb NOT NULL CHECK (jsonb_typeof(query) = 'object'),
+  state text NOT NULL CHECK (state IN ('reserved', 'completed', 'failed')),
+  charged_count smallint NOT NULL DEFAULT 10 CHECK (charged_count BETWEEN 0 AND 10),
+  result_count smallint NOT NULL DEFAULT 0 CHECK (result_count BETWEEN 0 AND 10),
+  results jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(results) = 'array'),
+  observed_at timestamptz,
+  failure_code text CHECK (failure_code IS NULL OR failure_code IN
+    ('source_unavailable', 'source_timeout', 'invalid_source_response')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  PRIMARY KEY (user_id, request_key)
+);
+
+ALTER TABLE public.osm_search_daily_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.osm_search_requests ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.osm_search_daily_usage, public.osm_search_requests FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.osm_search_daily_usage, public.osm_search_requests TO service_role;
+
+CREATE OR REPLACE FUNCTION public.osm_reservar_pesquisa(
+  p_user_id uuid, p_request_key uuid, p_city text, p_uf text, p_segment text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_day date := (now() AT TIME ZONE 'UTC')::date;
+  v_query jsonb;
+  v_used smallint;
+  v_existing public.osm_search_requests%rowtype;
+BEGIN
+  IF p_user_id IS NULL OR p_request_key IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.research_reviewers r WHERE r.user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'reviewer authorization required' USING ERRCODE = '42501';
+  END IF;
+  IF p_city IS NULL OR length(btrim(p_city)) NOT BETWEEN 2 AND 100
+     OR p_city ~ '[[:cntrl:]]'
+     OR p_uf IS NULL OR upper(btrim(p_uf)) !~ '^(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)$'
+     OR p_segment IS NULL OR p_segment NOT IN ('veterinaria','restaurante','farmacia','barbearia','padaria','hotel','oficina') THEN
+    RAISE EXCEPTION 'invalid search filters' USING ERRCODE = '22023';
+  END IF;
+  v_query := jsonb_build_object('city', btrim(p_city), 'uf', upper(btrim(p_uf)), 'segment', p_segment);
+
+  INSERT INTO public.osm_search_daily_usage (user_id, quota_day)
+  VALUES (p_user_id, v_day) ON CONFLICT DO NOTHING;
+  SELECT u.used_count INTO v_used FROM public.osm_search_daily_usage u
+   WHERE u.user_id = p_user_id AND u.quota_day = v_day FOR UPDATE;
+
+  SELECT * INTO v_existing FROM public.osm_search_requests r
+   WHERE r.user_id = p_user_id AND r.request_key = p_request_key FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing.query <> v_query THEN
+      RAISE EXCEPTION 'idempotency key reused with different filters' USING ERRCODE = '22023';
+    END IF;
+    RETURN jsonb_build_object(
+      'state', v_existing.state, 'cached', true, 'results', v_existing.results,
+      'failure_code', v_existing.failure_code, 'observed_at', v_existing.observed_at
+    );
+  END IF;
+
+  IF v_used + 10 > 50 THEN
+    RAISE EXCEPTION 'daily OSM research limit reached' USING ERRCODE = '54000';
+  END IF;
+  UPDATE public.osm_search_daily_usage SET used_count = used_count + 10
+   WHERE user_id = p_user_id AND quota_day = v_day;
+  INSERT INTO public.osm_search_requests
+    (user_id, request_key, quota_day, query, state, charged_count)
+  VALUES (p_user_id, p_request_key, v_day, v_query, 'reserved', 10);
+  RETURN jsonb_build_object('state', 'reserved', 'cached', false, 'reserved_count', 10);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.osm_concluir_pesquisa(
+  p_user_id uuid, p_request_key uuid, p_results jsonb, p_observed_at timestamptz
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_request public.osm_search_requests%rowtype;
+  v_count smallint;
+BEGIN
+  IF p_user_id IS NULL OR p_request_key IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.research_reviewers r WHERE r.user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'reviewer authorization required' USING ERRCODE = '42501';
+  END IF;
+  IF p_results IS NULL OR jsonb_typeof(p_results) <> 'array'
+     OR jsonb_array_length(p_results) > 10 OR p_observed_at IS NULL THEN
+    RAISE EXCEPTION 'invalid OSM result payload' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_request FROM public.osm_search_requests r
+   WHERE r.user_id = p_user_id AND r.request_key = p_request_key FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'search reservation not found' USING ERRCODE = 'P0002'; END IF;
+  IF v_request.state = 'completed' THEN
+    RETURN jsonb_build_object('state', 'completed', 'cached', true, 'results', v_request.results,
+      'observed_at', v_request.observed_at);
+  END IF;
+  IF v_request.state <> 'reserved' THEN RAISE EXCEPTION 'search reservation is not active' USING ERRCODE = '22023'; END IF;
+
+  v_count := jsonb_array_length(p_results)::smallint;
+  UPDATE public.osm_search_daily_usage SET used_count = used_count - v_request.charged_count + v_count
+   WHERE user_id = p_user_id AND quota_day = v_request.quota_day;
+  UPDATE public.osm_search_requests SET state = 'completed', result_count = v_count,
+    charged_count = v_count, results = p_results, observed_at = p_observed_at,
+    completed_at = now(), failure_code = NULL
+   WHERE user_id = p_user_id AND request_key = p_request_key;
+  RETURN jsonb_build_object('state', 'completed', 'cached', false, 'results', p_results,
+    'observed_at', p_observed_at);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.osm_falhar_pesquisa(
+  p_user_id uuid, p_request_key uuid, p_failure_code text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_request public.osm_search_requests%rowtype;
+BEGIN
+  IF p_user_id IS NULL OR p_request_key IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.research_reviewers r WHERE r.user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'reviewer authorization required' USING ERRCODE = '42501';
+  END IF;
+  IF p_failure_code NOT IN ('source_unavailable','source_timeout','invalid_source_response') THEN
+    RAISE EXCEPTION 'invalid source failure code' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_request FROM public.osm_search_requests r
+   WHERE r.user_id = p_user_id AND r.request_key = p_request_key FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'search reservation not found' USING ERRCODE = 'P0002'; END IF;
+  IF v_request.state = 'completed' THEN
+    RETURN jsonb_build_object('state', 'completed', 'cached', true, 'results', v_request.results,
+      'observed_at', v_request.observed_at);
+  END IF;
+  IF v_request.state = 'failed' THEN
+    RETURN jsonb_build_object('state', 'failed', 'cached', true, 'failure_code', v_request.failure_code);
+  END IF;
+  -- Keep the whole 10-result reservation on errors so repeated failures cannot exceed the cap.
+  UPDATE public.osm_search_requests SET state = 'failed', failure_code = p_failure_code,
+    completed_at = now() WHERE user_id = p_user_id AND request_key = p_request_key;
+  RETURN jsonb_build_object('state', 'failed', 'cached', false, 'failure_code', p_failure_code);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.osm_reservar_pesquisa(uuid,uuid,text,text,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.osm_concluir_pesquisa(uuid,uuid,jsonb,timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.osm_reservar_pesquisa(uuid,uuid,text,text,text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.osm_concluir_pesquisa(uuid,uuid,jsonb,timestamptz) TO service_role;
+GRANT EXECUTE ON FUNCTION public.osm_falhar_pesquisa(uuid,uuid,text) TO service_role;
