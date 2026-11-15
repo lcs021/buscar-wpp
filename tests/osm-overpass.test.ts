@@ -17,6 +17,11 @@ Deno.test("Overpass query uses fixed segment tags and hard response bounds", () 
   let rejected = false;
   try { buildOverpassQuery({ ...filters, segment: "veterinaria];out;" }); } catch { rejected = true; }
   if (!rejected) throw new Error("unknown segment must not enter Overpass QL");
+  const reservedQuery = buildOverpassQuery(filters, 1);
+  if (!reservedQuery.includes("out center tags 1")) throw new Error("query must honor server-reserved candidate capacity");
+  if (mapOverpassElements(fixture, filters, "2026-11-15T12:00:00.000Z", 1).length !== 1) {
+    throw new Error("mapper must truncate to the reserved candidate capacity before persistence");
+  }
 });
 
 Deno.test("only explicit self-hosted HTTPS Overpass endpoints are accepted", () => {
@@ -36,7 +41,7 @@ Deno.test("Overpass 301/302 redirects fail closed and never follow the public de
       calls.push(url);
       if (url.endsWith("/auth/v1/user")) return Promise.resolve(Response.json({ id: "00000000-0000-4000-8000-000000000001" }));
       if (url.endsWith("/rpc/osm_recuperar_reservas_abandonadas")) return Promise.resolve(Response.json({ recovered: 0 }));
-      if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false }));
+      if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false, result_reserved_count: 10 }));
       if (url === "https://overpass.example/api/interpreter") {
         redirectMode = init?.redirect;
         return Promise.resolve(new Response(null, { status, headers: { Location: "https://overpass-api.de/api/interpreter" } }));
@@ -64,7 +69,7 @@ Deno.test("repeated successful empty searches each reserve and persist one upstr
     const url = String(input);
     if (url.endsWith("/auth/v1/user")) return Promise.resolve(Response.json({ id: "00000000-0000-4000-8000-000000000001" }));
     if (url.endsWith("/rpc/osm_recuperar_reservas_abandonadas")) return Promise.resolve(Response.json({ recovered: 0 }));
-    if (url.endsWith("/rpc/osm_reservar_pesquisa")) { reservations++; return Promise.resolve(Response.json({ state: "reserved", cached: false })); }
+    if (url.endsWith("/rpc/osm_reservar_pesquisa")) { reservations++; return Promise.resolve(Response.json({ state: "reserved", cached: false, result_reserved_count: 10 })); }
     if (url === "https://overpass.example/api/interpreter") { sourceCalls++; return Promise.resolve(Response.json({ elements: [] })); }
     if (url.endsWith("/rpc/osm_concluir_pesquisa")) {
       if (!String(init?.body).includes('"p_results":[]')) throw new Error("empty source result not persisted");
@@ -84,6 +89,39 @@ Deno.test("repeated successful empty searches each reserve and persist one upstr
     if (response.status !== 200 || (await response.json()).search_status !== "inconclusive") throw new Error("empty search must be successful but inconclusive");
   }
   if (sourceCalls !== 2 || reservations !== 2) throw new Error("distinct empty searches must each consume one call reservation");
+});
+
+Deno.test("reserved result capacity controls Overpass output and persisted candidates", async () => {
+  let savedCount = 0;
+  let queryLimit = 0;
+  const fetcher: typeof fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/v1/user")) return Promise.resolve(Response.json({ id: "00000000-0000-4000-8000-000000000001" }));
+    if (url.endsWith("/rpc/osm_recuperar_reservas_abandonadas")) return Promise.resolve(Response.json({ recovered: 0 }));
+    if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false, result_reserved_count: 1 }));
+    if (url === "https://overpass.example/api/interpreter") {
+      const form = init?.body as URLSearchParams;
+      queryLimit = Number(form.get("data")?.match(/out center tags (\d+);/)?.[1]);
+      return Promise.resolve(Response.json(fixture));
+    }
+    if (url.endsWith("/rpc/osm_concluir_pesquisa")) {
+      const body = JSON.parse(String(init?.body));
+      savedCount = body.p_results.length;
+      return Promise.resolve(Response.json({ state: "completed", results: body.p_results }));
+    }
+    return Promise.reject(new Error(`unexpected endpoint: ${url}`));
+  };
+  const env = (key: string) => ({
+    SUPABASE_URL: "https://supabase.example", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service",
+    OVERPASS_API_URL: "https://overpass.example/api/interpreter", OVERPASS_API_SELF_HOSTED: "true",
+  } as Record<string, string>)[key];
+  const response = await handler(new Request("https://edge.example/pesquisar-osm", {
+    method: "POST", headers: { Authorization: "Bearer synthetic-jwt", "Content-Type": "application/json" },
+    body: JSON.stringify({ ...filters, idempotencyKey: "00000000-0000-4000-8000-000000000095" }),
+  }), env, fetcher);
+  if (response.status !== 200 || queryLimit !== 1 || savedCount !== 1) {
+    throw new Error("source query and persistence must be truncated to reserved capacity");
+  }
 });
 
 Deno.test("response-body timeout cancels a stalled stream and oversized bodies fail", async () => {
@@ -114,7 +152,7 @@ Deno.test("handler timeout remains active until slow response body is consumed",
     calls.push(url);
     if (url.endsWith("/auth/v1/user")) return Promise.resolve(Response.json({ id: "00000000-0000-4000-8000-000000000001" }));
     if (url.endsWith("/rpc/osm_recuperar_reservas_abandonadas")) return Promise.resolve(Response.json({ recovered: 0 }));
-    if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false }));
+    if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false, result_reserved_count: 10 }));
     if (url === "https://overpass.example/api/interpreter") return Promise.resolve(new Response(new ReadableStream<Uint8Array>({
       start(controller) { controller.enqueue(new TextEncoder().encode("{")); },
       cancel() { cancelled = true; },
@@ -158,7 +196,7 @@ Deno.test("source HTTP errors are recorded and do not call a real Overpass or Go
     calls.push({ url, body: typeof init?.body === "string" ? init.body : undefined });
     if (url.endsWith("/auth/v1/user")) return Promise.resolve(Response.json({ id: "00000000-0000-4000-8000-000000000001" }));
     if (url.endsWith("/rpc/osm_recuperar_reservas_abandonadas")) return Promise.resolve(Response.json({ recovered: 0 }));
-    if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false }));
+    if (url.endsWith("/rpc/osm_reservar_pesquisa")) return Promise.resolve(Response.json({ state: "reserved", cached: false, result_reserved_count: 10 }));
     if (url === "https://overpass.example/api/interpreter") return Promise.resolve(new Response("unavailable", { status: 503 }));
     if (url.endsWith("/rpc/osm_falhar_pesquisa")) return Promise.resolve(Response.json({ state: "failed", cached: false }));
     return Promise.reject(new Error(`unexpected endpoint: ${url}`));

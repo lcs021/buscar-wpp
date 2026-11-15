@@ -83,16 +83,17 @@ function escapeOverpass(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-export function buildOverpassQuery(filters: Filtros): string {
+export function buildOverpassQuery(filters: Filtros, resultLimit = MAX_RESULTADOS_CONSULTA): string {
   const tag = SEGMENTOS[filters.segment];
   if (!tag) throw new Error("unsupported segment");
+  if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > MAX_RESULTADOS_CONSULTA) throw new Error("invalid result limit");
   const city = escapeOverpass(filters.city);
   const state = `BR-${filters.uf}`;
   return `[out:json][timeout:20][maxsize:4194304];\n` +
     `rel["boundary"="administrative"]["admin_level"="8"]["name"="${city}"]["ISO3166-2"="${state}"]->.city;\n` +
     `map_to_area.city->.searchArea;\n` +
     `(node["${tag.chave}"="${tag.valor}"](area.searchArea);way["${tag.chave}"="${tag.valor}"](area.searchArea);relation["${tag.chave}"="${tag.valor}"](area.searchArea););\n` +
-    `out center tags ${MAX_RESULTADOS_CONSULTA};`;
+    `out center tags ${resultLimit};`;
 }
 
 export function validarEndpointOverpass(raw: string | undefined, selfHosted: string | undefined): URL | null {
@@ -167,7 +168,8 @@ function websiteUrl(value: unknown): string | null {
   }
 }
 
-export function mapOverpassElements(value: unknown, filters: Filtros, observedAt: string): Candidato[] {
+export function mapOverpassElements(value: unknown, filters: Filtros, observedAt: string, resultLimit = MAX_RESULTADOS_CONSULTA): Candidato[] {
+  if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > MAX_RESULTADOS_CONSULTA) throw new SourceError("invalid_source_response");
   if (!value || typeof value !== "object" || !Array.isArray((value as { elements?: unknown }).elements)) {
     throw new SourceError("invalid_source_response");
   }
@@ -210,7 +212,7 @@ export function mapOverpassElements(value: unknown, filters: Filtros, observedAt
       attribution: ATRIBUICAO,
       attribution_url: URL_DIREITOS,
     });
-    if (mapped.length === MAX_RESULTADOS_CONSULTA) break;
+    if (mapped.length === resultLimit) break;
   }
   return mapped;
 }
@@ -303,6 +305,10 @@ export async function handler(
   if (reservation.state === "completed") return json({ ...reservation, attribution: ATRIBUICAO, attribution_url: URL_DIREITOS });
   if (reservation.state === "failed") return json({ error: "source failure recorded", failure_code: reservation.failure_code }, 502);
   if (reservation.cached === true || reservation.state !== "reserved") return json({ state: "in_progress", retry_with_same_key: true }, 202);
+  const resultLimit = Number(reservation.result_reserved_count);
+  if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > MAX_RESULTADOS_CONSULTA) {
+    return json({ error: "invalid reserved candidate capacity; source not queried" }, 503);
+  }
 
   let candidates: Candidato[];
   const observedAt = new Date().toISOString();
@@ -318,7 +324,7 @@ export async function handler(
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "User-Agent": "LeadFinder-OSM-connector/1.0",
         },
-        body: new URLSearchParams({ data: buildOverpassQuery(filters) }),
+        body: new URLSearchParams({ data: buildOverpassQuery(filters, resultLimit) }),
         signal: controller.signal,
       });
       if (controller.signal.aborted) throw new SourceError("source_timeout");
@@ -329,7 +335,7 @@ export async function handler(
       const sourceText = await lerRespostaLimitada(sourceResponse, controller.signal);
     let sourceData: unknown;
     try { sourceData = JSON.parse(sourceText); } catch { throw new SourceError("invalid_source_response"); }
-    candidates = mapOverpassElements(sourceData, filters, observedAt);
+    candidates = mapOverpassElements(sourceData, filters, observedAt, resultLimit);
     } finally { clearTimeout(timeout); }
   } catch (error) {
     const failureCode = sourceFailureCode(error);
@@ -356,7 +362,8 @@ export async function handler(
     license: LICENCA,
     attribution: ATRIBUICAO,
     attribution_url: URL_DIREITOS,
-    daily_limit: 50,
+    daily_call_limit: 50,
+    daily_candidate_limit: 50,
     query_limit: MAX_RESULTADOS_CONSULTA,
   });
 }

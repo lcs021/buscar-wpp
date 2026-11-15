@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.osm_search_daily_usage (
   quota_day date NOT NULL,
   calls_used smallint NOT NULL DEFAULT 0 CHECK (calls_used BETWEEN 0 AND 50),
+  candidate_slots_used smallint NOT NULL DEFAULT 0 CHECK (candidate_slots_used BETWEEN 0 AND 50),
   PRIMARY KEY (quota_day)
 );
 
@@ -71,6 +72,8 @@ DECLARE
   v_day date := (now() AT TIME ZONE 'UTC')::date;
   v_query jsonb;
   v_used smallint;
+  v_candidates_used smallint;
+  v_reserved_results smallint;
   v_existing public.osm_search_requests%rowtype;
 BEGIN
   IF p_user_id IS NULL OR p_request_key IS NULL OR NOT EXISTS (
@@ -90,7 +93,7 @@ BEGIN
 
   INSERT INTO public.osm_search_daily_usage (quota_day)
   VALUES (v_day) ON CONFLICT DO NOTHING;
-  SELECT u.calls_used INTO v_used FROM public.osm_search_daily_usage u
+  SELECT u.calls_used, u.candidate_slots_used INTO v_used, v_candidates_used FROM public.osm_search_daily_usage u
    WHERE u.quota_day = v_day FOR UPDATE;
 
   SELECT * INTO v_existing FROM public.osm_search_requests r
@@ -105,15 +108,22 @@ BEGIN
     );
   END IF;
 
-  IF v_used + 1 > 50 THEN
+  IF v_used >= 50 THEN
     RAISE EXCEPTION 'daily OSM research limit reached' USING ERRCODE = '54000';
   END IF;
-  UPDATE public.osm_search_daily_usage SET calls_used = calls_used + 1
+  IF v_candidates_used >= 50 THEN
+    RAISE EXCEPTION 'daily OSM candidate result limit reached' USING ERRCODE = '54000';
+  END IF;
+  v_reserved_results := least(10, 50 - v_candidates_used);
+  UPDATE public.osm_search_daily_usage
+     SET calls_used = calls_used + 1, candidate_slots_used = candidate_slots_used + v_reserved_results
    WHERE quota_day = v_day;
   INSERT INTO public.osm_search_requests
     (user_id, request_key, quota_day, query, state, charged_count, reservation_expires_at)
-  VALUES (p_user_id, p_request_key, v_day, v_query, 'reserved', 10, now() + interval '2 minutes');
-  RETURN jsonb_build_object('state', 'reserved', 'cached', false, 'reserved_count', 10, 'daily_calls_used', v_used + 1);
+  VALUES (p_user_id, p_request_key, v_day, v_query, 'reserved', v_reserved_results, now() + interval '2 minutes');
+  RETURN jsonb_build_object('state', 'reserved', 'cached', false,
+    'result_reserved_count', v_reserved_results, 'daily_calls_used', v_used + 1,
+    'daily_candidate_slots_used', v_candidates_used + v_reserved_results);
 END;
 $$;
 
@@ -124,6 +134,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   v_request public.osm_search_requests%rowtype;
+  v_quota_day date;
   v_count smallint;
   v_result jsonb;
   v_evidence jsonb;
@@ -133,10 +144,13 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'reviewer authorization required' USING ERRCODE = '42501';
   END IF;
-  IF p_results IS NULL OR jsonb_typeof(p_results) <> 'array'
-     OR jsonb_array_length(p_results) > 10 OR p_observed_at IS NULL THEN
+  IF p_results IS NULL OR jsonb_typeof(p_results) <> 'array' OR p_observed_at IS NULL THEN
     RAISE EXCEPTION 'invalid OSM result payload' USING ERRCODE = '22023';
   END IF;
+  SELECT r.quota_day INTO v_quota_day FROM public.osm_search_requests r
+   WHERE r.user_id = p_user_id AND r.request_key = p_request_key;
+  IF NOT FOUND THEN RAISE EXCEPTION 'search reservation not found' USING ERRCODE = 'P0002'; END IF;
+  PERFORM 1 FROM public.osm_search_daily_usage u WHERE u.quota_day = v_quota_day FOR UPDATE;
   SELECT * INTO v_request FROM public.osm_search_requests r
    WHERE r.user_id = p_user_id AND r.request_key = p_request_key FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'search reservation not found' USING ERRCODE = 'P0002'; END IF;
@@ -145,6 +159,9 @@ BEGIN
       'observed_at', v_request.observed_at);
   END IF;
   IF v_request.state <> 'reserved' THEN RAISE EXCEPTION 'search reservation is not active' USING ERRCODE = '22023'; END IF;
+  IF jsonb_array_length(p_results) > v_request.charged_count THEN
+    RAISE EXCEPTION 'result payload exceeds reserved daily candidate capacity' USING ERRCODE = '54000';
+  END IF;
 
   FOR v_result IN SELECT value FROM jsonb_array_elements(p_results) AS item(value)
   LOOP
@@ -175,8 +192,14 @@ BEGIN
   END LOOP;
 
   v_count := jsonb_array_length(p_results)::smallint;
+  IF v_count > 0 THEN
+    UPDATE public.osm_search_daily_usage
+       SET candidate_slots_used = candidate_slots_used - (v_request.charged_count - v_count)
+     WHERE quota_day = v_request.quota_day;
+  END IF;
   UPDATE public.osm_search_requests SET state = 'completed', result_count = v_count,
-    charged_count = v_count, results = p_results, observed_at = p_observed_at,
+    charged_count = CASE WHEN v_count > 0 THEN v_count ELSE charged_count END,
+    results = p_results, observed_at = p_observed_at,
     completed_at = now(), failure_code = NULL
    WHERE user_id = p_user_id AND request_key = p_request_key;
   RETURN jsonb_build_object('state', 'completed', 'cached', false, 'results', p_results,
